@@ -1,14 +1,14 @@
 library(shiny)
 library(tidyverse)
+list.files("R", full.names = TRUE) |> purrr::walk(source)
 
 ui = fluidPage(
     titlePanel("Count Regression Toolkit"),
     sidebarLayout(
         sidebarPanel(
-        fileInput("file", "Upload CSV File", accept = ".csv"),
-        uiOutput("response_ui")
-    ),
-
+            fileInput("file", "Upload CSV File", accept = ".csv"),
+            uiOutput("response_ui")
+        ),
         mainPanel(
             tabsetPanel(
                 tabPanel("Data Preview",
@@ -23,6 +23,7 @@ ui = fluidPage(
     )
 )
 
+
 server = function(input, output, session){
     # Load Data
     data = reactive({
@@ -36,7 +37,7 @@ server = function(input, output, session){
     selectInput(
       "response",
       "Select Response Variable (Count)",
-      choices = names(data())
+      choices = names(data())[sapply(data(), is.numeric)]
     )
     })
 
@@ -48,23 +49,19 @@ server = function(input, output, session){
 
      # Summary stats
     output$summary_stats <- renderPrint({
-    req(data(), input$response)
-    
-    y <- data()[[input$response]]
-    
-    # Remove NA
-    y <- y[!is.na(y)]
-    
-    cat("Count Summary:\n\n")
-    cat("Mean:", mean(y), "\n")
-    cat("Variance:", var(y), "\n")
-    cat("Min:", min(y), "\n")
-    cat("Max:", max(y), "\n")
-    cat("Proportion of Zeros:", mean(y == 0), "\n")
+        req(data(), input$response)
+        
+        s <- get_count_summary(data(), input$response)
+        
+        cat("Mean:", s$mean, "\n")
+        cat("Variance:", s$variance, "\n")
+        cat("Min:", s$min, "\n")
+        cat("Max:", s$max, "\n")
+        cat("Proportion of zeros:", s$zero_prop, "\n")
     })
 
     # Plot
-    output$count_plot <- renderPlot({
+    output$count_plot = renderPlot({
     req(data(), input$response)
     
     df <- data()
@@ -79,7 +76,6 @@ server = function(input, output, session){
       ) +
       theme_minimal()
   })
-  
 }
 
 shinyApp(ui, server)
