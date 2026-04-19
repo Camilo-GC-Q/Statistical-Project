@@ -9,7 +9,9 @@ ui = fluidPage(
             fileInput("file", "Upload CSV File", accept = ".csv"),
             uiOutput("response_ui"),
             uiOutput("predictor_ui"),
-            actionButton("fit_poisson", "Fit Poisson Model")
+            actionButton("fit_poisson", "Fit Poisson Model"),
+            br(), br(),
+            actionButton("fit_nb", "Fit Negative Binomial Model")
         ),
         mainPanel(
             tabsetPanel(
@@ -26,6 +28,13 @@ ui = fluidPage(
                         tableOutput("poisson_table"),
                         h4("Rate Ratios"),
                         tableOutput("rate_ratio_table")
+                ),
+                tabPanel("Negative Binomial Model",
+                        verbatimTextOutput("nb_model_formula"),
+                        h4("Coefficients (Log Scale)"),
+                        tableOutput("nb_table"),
+                        h4("Incidence Rate Ratios"),
+                        tableOutput("irr_table")
                 )
             )
         )
@@ -43,6 +52,11 @@ server = function(input, output, session){
     poisson_model = eventReactive(input$fit_poisson, {
         req(data(), input$response, input$predictors)
         fit_poisson_model(data(), input$response, input$predictors)
+    })
+
+    nb_model = eventReactive(input$fit_nb, {
+        req(data(), input$response, input$predictors)
+        fit_negative_binomial_model(data(), input$response, input$predictors)
     })
 
     output$model_formula = renderPrint({
@@ -63,6 +77,22 @@ server = function(input, output, session){
     output$rate_ratio_table = renderTable({
         req(poisson_model())
         get_rate_ratio_table(poisson_model())
+    })
+
+    # Negative Binomial outputs
+    output$nb_model_formula = renderPrint({
+        req(nb_model())
+        formula(nb_model())
+    })
+
+    output$nb_table = renderTable({
+        req(nb_model())
+        get_negative_binomial_table(nb_model())
+    })
+
+    output$irr_table = renderTable({
+        req(nb_model())
+        get_incidence_rate_ratio_table(nb_model())
     })
 
     output$response_ui = renderUI({

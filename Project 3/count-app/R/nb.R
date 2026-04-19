@@ -1,13 +1,31 @@
-fit_nb_model <- function(formula, data, offset = NULL) {
-  
-  if (is.null(offset)) {
-    # No offset
-    model <- MASS::glm.nb(formula, data = data)
-  } else {
-    # Add offset to the formula
-    formula_with_offset <- update(formula, . ~ . + offset(offset))
-    model <- MASS::glm.nb(formula_with_offset, data = data)
-  }
-  
-  return(model)
+fit_negative_binomial_model = function(df, response, predictors){
+    if (length(predictors) == 0){
+        stop("Please choose at least one predictor")
+    }
+    vars_needed = c(response, predictors)
+    model_data = df |>
+        select(all_of(vars_needed)) |>
+        drop_na()
+    formula_text = paste(response, "~", paste(predictors, collapse = " + "))
+    model_formula <- as.formula(formula_text)
+    MASS::glm.nb(model_formula, data = model_data)
+}
+
+get_negative_binomial_table = function(model){
+    broom::tidy(model) %>%
+        mutate(across(where(is.numeric), ~ round(.x, 4)))
+}
+
+get_incidence_rate_ratio_table = function(model){
+    broom::tidy(model) %>%
+        transmute(
+            term,
+            estimate,
+            incidence_rate_ratio = exp(estimate),
+            percent_change = 100 * (exp(estimate) - 1),
+            conf.low = exp(estimate - 1.96 * std.error),
+            conf.high = exp(estimate + 1.96 * std.error),
+            p.value
+        ) %>%
+        mutate(across(where(is.numeric), ~ round(.x, 4)))
 }
