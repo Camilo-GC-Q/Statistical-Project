@@ -21,8 +21,10 @@ get_incidence_rate_ratio_table = function(model){
         transmute(
             term,
             estimate,
-            incidence_rate_ratio = exp(estimate),
+            rate_ratio = exp(estimate),
             percent_change = 100 * (exp(estimate) - 1),
+            std.error,
+            statistic,
             conf.low = exp(estimate - 1.96 * std.error),
             conf.high = exp(estimate + 1.96 * std.error),
             p.value

@@ -26,23 +26,17 @@ ui = fluidPage(
                 ),
                 tabPanel("Poisson Model",
                         verbatimTextOutput("model_formula"),
-                        h4("Coefficients (Log Scale)"),
-                        tableOutput("poisson_table"),
-                        h4("Rate Ratios"),
+                        h4("Incidence Rate Ratios"),
                         tableOutput("rate_ratio_table")
                 ),
                 tabPanel("Negative Binomial Model",
                         verbatimTextOutput("nb_model_formula"),
-                        h4("Coefficients (Log Scale)"),
-                        tableOutput("nb_table"),
                         h4("Incidence Rate Ratios"),
                         tableOutput("irr_table")
                 ),
                 tabPanel("Quasi-Poisson Model",
                         verbatimTextOutput("quasi_poisson_formula"),
-                        h4("Coefficients (Log Scale)"),
-                        tableOutput("quasi_poisson_table"),
-                        h4("Rate Ratios"),
+                        h4("Incidence Rate Ratios"),
                         tableOutput("quasi_irr_table")
                 )
             )
@@ -83,10 +77,6 @@ server = function(input, output, session){
         cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
     })
 
-    output$poisson_table = renderTable({
-        req(poisson_model())
-        get_poisson_table(poisson_model())
-    })
 
     output$rate_ratio_table = renderTable({
         req(poisson_model())
@@ -99,10 +89,6 @@ server = function(input, output, session){
         formula(nb_model())
     })
 
-    output$nb_table = renderTable({
-        req(nb_model())
-        get_negative_binomial_table(nb_model())
-    })
 
     output$irr_table = renderTable({
         req(nb_model())
@@ -113,11 +99,6 @@ server = function(input, output, session){
     output$quasi_poisson_formula = renderPrint({
         req(quasi_poisson_model())
         formula(quasi_poisson_model())
-    })
-
-    output$quasi_poisson_table_table = renderTable({
-        req(quasi_poisson_model())
-        get_quasi_poisson_table(quasi_poisson_model())
     })
 
     output$quasi_irr_table = renderTable({
