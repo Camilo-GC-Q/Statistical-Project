@@ -77,6 +77,16 @@ server = function(input, output, session){
         cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
     })
 
+    output$nb_model_formula = renderPrint({
+        req(input$response, input$predictors)
+        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
+    })
+
+    output$quasi_poisson_formula = renderPrint({
+        req(input$response, input$predictors)
+        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
+}   )
+
     output$poisson_table = renderTable({
         req(poisson_model())
         get_poisson_table(poisson_model())
@@ -88,10 +98,7 @@ server = function(input, output, session){
     })
 
     # Negative Binomial outputs
-    output$nb_model_formula = renderPrint({
-        req(nb_model())
-        formula(nb_model())
-    })
+    
 
 
     output$irr_table = renderTable({
@@ -100,10 +107,7 @@ server = function(input, output, session){
     })
 
     # Quasi Poisson outputs
-    output$quasi_poisson_formula = renderPrint({
-        req(quasi_poisson_model())
-        formula(quasi_poisson_model())
-    })
+    
 
     output$quasi_irr_table = renderTable({
         req(quasi_poisson_model())
