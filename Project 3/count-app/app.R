@@ -51,7 +51,7 @@ server = function(input, output, session){
         req(input$file)
         read_csv(input$file$datapath)
     })
-
+    # Fit poisson model
     poisson_model = eventReactive(input$fit_poisson, {
         req(data(), input$response, input$predictors)
         fit_poisson_model(data(), input$response, input$predictors)
@@ -77,6 +77,10 @@ server = function(input, output, session){
         cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
     })
 
+    output$poisson_table = renderTable({
+        req(poisson_model())
+        get_poisson_table(poisson_model())
+    })
 
     output$rate_ratio_table = renderTable({
         req(poisson_model())
