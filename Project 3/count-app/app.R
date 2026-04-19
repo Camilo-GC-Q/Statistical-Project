@@ -7,7 +7,9 @@ ui = fluidPage(
     sidebarLayout(
         sidebarPanel(
             fileInput("file", "Upload CSV File", accept = ".csv"),
-            uiOutput("response_ui")
+            uiOutput("response_ui"),
+            uiOutput("predictor_ui"),
+            actionButton("fit_poisson", "Fit Poisson Model")
         ),
         mainPanel(
             tabsetPanel(
@@ -17,6 +19,13 @@ ui = fluidPage(
                 tabPanel("Count Summary",
                         verbatimTextOutput("summary_stats"),
                         plotOutput("count_plot")
+                ),
+                tabPanel("Poisson Model",
+                        verbatimTextOutput("model_formula"),
+                        h4("Coefficients (Log Scale)"),
+                        tableOutput("poisson_table"),
+                        h4("Rate Ratios"),
+                        tableOutput("rate_ratio_table")
                 )
             )
         )
@@ -31,7 +40,32 @@ server = function(input, output, session){
         read_csv(input$file$datapath)
     })
 
-    output$response_ui <- renderUI({
+    poisson_model = eventReactive(input$fit_poisson, {
+        req(data(), input$response, input$predictors)
+        fit_poisson_model(data(), input$response, input$predictors)
+    })
+
+    output$model_formula = renderPrint({
+        req(input$response, input$predictors)
+
+        validate(
+            need(length(input$predictors) > 0, "Please select at least one predictor.")
+        )
+
+        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
+    })
+
+    output$poisson_table = renderTable({
+        req(poisson_model())
+        get_poisson_table(poisson_model())
+    })
+
+    output$rate_ratio_table = renderTable({
+        req(poisson_model())
+        get_rate_ratio_table(poisson_model())
+    })
+
+    output$response_ui = renderUI({
     req(data())
     
     selectInput(
@@ -39,6 +73,16 @@ server = function(input, output, session){
       "Select Response Variable (Count)",
       choices = names(data())[sapply(data(), is.numeric)]
     )
+    })
+    output$predictor_ui = renderUI({
+        req(data(), input$response)
+
+        selectInput(
+            "predictors",
+            "Select Predictor Variable(s)",
+            choices = setdiff(names(data()), input$response),
+            multiple = TRUE
+        )
     })
 
     # Data Preview
