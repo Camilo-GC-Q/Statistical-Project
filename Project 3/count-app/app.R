@@ -11,7 +11,9 @@ ui = fluidPage(
             uiOutput("predictor_ui"),
             actionButton("fit_poisson", "Fit Poisson Model"),
             br(), br(),
-            actionButton("fit_nb", "Fit Negative Binomial Model")
+            actionButton("fit_nb", "Fit Negative Binomial Model"),
+            br(), br(),
+            actionButton("fit_quasi_poisson", "Fit Quasi Poisson Model")
         ),
         mainPanel(
             tabsetPanel(
@@ -35,6 +37,13 @@ ui = fluidPage(
                         tableOutput("nb_table"),
                         h4("Incidence Rate Ratios"),
                         tableOutput("irr_table")
+                ),
+                tabPanel("Quasi-Poisson Model",
+                        verbatimTextOutput("quasi_poisson_formula"),
+                        h4("Coefficients (Log Scale)"),
+                        tableOutput("quasi_poisson_table"),
+                        h4("Rate Ratios"),
+                        tableOutput("quasi_irr_table")
                 )
             )
         )
@@ -57,6 +66,11 @@ server = function(input, output, session){
     nb_model = eventReactive(input$fit_nb, {
         req(data(), input$response, input$predictors)
         fit_negative_binomial_model(data(), input$response, input$predictors)
+    })
+
+    quasi_poisson_model = eventReactive(input$fit_quasi_poisson, {
+        req(data(), input$response, input$predictors)
+        fit_quasi_poisson_model(data(), input$response, input$predictors)
     })
 
     output$model_formula = renderPrint({
@@ -93,6 +107,22 @@ server = function(input, output, session){
     output$irr_table = renderTable({
         req(nb_model())
         get_incidence_rate_ratio_table(nb_model())
+    })
+
+    # Quasi Poisson outputs
+    output$quasi_poisson_formula = renderPrint({
+        req(quasi_poisson_model())
+        formula(quasi_poisson_model())
+    })
+
+    output$quasi_poisson_table_table = renderTable({
+        req(quasi_poisson_model())
+        get_quasi_poisson_table(quasi_poisson_model())
+    })
+
+    output$quasi_irr_table = renderTable({
+        req(quasi_poisson_model())
+        get_quasi_rate_ratio_table(quasi_poisson_model())
     })
 
     output$response_ui = renderUI({
