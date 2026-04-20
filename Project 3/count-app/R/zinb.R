@@ -1,3 +1,6 @@
+library(parameters)
+library(dplyr)
+
 fit_zinb_model = function(df, response, predictors){
     if (length(predictors) == 0){
         stop("Please choose at least one predictor")
@@ -17,18 +20,18 @@ get_zinb_table = function(model){
 }
 
 get_zinb_irr_table = function(model){
-    broom::tidy(model) %>%
-        transmute(
-            term,
-            component,
-            estimate,
-            irr = exp(estimate),
-            percent_change = 100 * (exp(estimate) - 1),
-            std.error,
-            statistic,
-            conf.low = exp(estimate - 1.96 * std.error),
-            conf.high = exp(estimate + 1.96 * std.error),
-            p.value
-        ) %>%
-        mutate(across(where(is.numeric), ~ round(.x, 4)))
+    parameters::model_parameters(model, exponentiate = FALSE) %>%
+    as.data.frame() %>%
+    transmute(
+        term = Parameter,
+        estimate = Coefficient,
+        rate_ratio = exp(Coefficient),
+        percent_change = 100 * (exp(Coefficient) - 1),
+        std.error = SE,
+        statistic = z,
+        conf.low = exp(CI_low),
+        conf.high = exp(CI_high),
+        p.value = p
+    ) %>%
+    mutate(across(where(is.numeric), ~ round(.x, 4)))
 }
