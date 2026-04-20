@@ -11,9 +11,11 @@ ui = fluidPage(
             uiOutput("predictor_ui"),
             actionButton("fit_poisson", "Fit Poisson Model"),
             br(), br(),
+            actionButton("fit_quasi_poisson", "Fit Quasi Poisson Model"),
+            br(), br(),
             actionButton("fit_nb", "Fit Negative Binomial Model"),
             br(), br(),
-            actionButton("fit_quasi_poisson", "Fit Quasi Poisson Model")
+            actionButton("fit_zinb", "Fit Zero-Inflated Negative Binomial Model")
         ),
         mainPanel(
             tabsetPanel(
@@ -29,15 +31,20 @@ ui = fluidPage(
                         h4("Incidence Rate Ratios"),
                         tableOutput("rate_ratio_table")
                 ),
+                tabPanel("Quasi-Poisson Model",
+                        verbatimTextOutput("quasi_poisson_formula"),
+                        h4("Incidence Rate Ratios"),
+                        tableOutput("quasi_irr_table")
+                ),
                 tabPanel("Negative Binomial Model",
                         verbatimTextOutput("nb_model_formula"),
                         h4("Incidence Rate Ratios"),
                         tableOutput("irr_table")
                 ),
-                tabPanel("Quasi-Poisson Model",
-                        verbatimTextOutput("quasi_poisson_formula"),
+                tabPanel("Zero-Inflated Negative Binomial Model",
+                        verbatimTextOutput("zinb_model_formula"),
                         h4("Incidence Rate Ratios"),
-                        tableOutput("quasi_irr_table")
+                        tableOutput("zinb_irr_table")
                 )
             )
         )
@@ -67,6 +74,11 @@ server = function(input, output, session){
         fit_quasi_poisson_model(data(), input$response, input$predictors)
     })
 
+    zinb_poisson_model = eventReactive(input$fit_zinb, {
+        req(data(), input$response, input$predictors)
+        fit_zinb_model(data(), input$response, input$predictors)
+    })
+
     output$model_formula = renderPrint({
         req(input$response, input$predictors)
 
@@ -85,7 +97,12 @@ server = function(input, output, session){
     output$quasi_poisson_formula = renderPrint({
         req(input$response, input$predictors)
         cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
-}   )
+    })
+
+    output$zinb_model_formula = renderPrint({
+        req(input$response, input$predictors)
+        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
+    })
 
     output$poisson_table = renderTable({
         req(poisson_model())
@@ -107,11 +124,15 @@ server = function(input, output, session){
     })
 
     # Quasi Poisson outputs
-    
-
     output$quasi_irr_table = renderTable({
         req(quasi_poisson_model())
         get_quasi_rate_ratio_table(quasi_poisson_model())
+    })
+
+    #Zinb Model
+    output$zinb_irr_table = renderTable({
+        req(zinb_model())
+        get_zinb_irr_table(zinb_model())
     })
 
     output$response_ui = renderUI({
