@@ -52,6 +52,10 @@ ui = fluidPage(
                 ),
                 tabPanel("Pairwise Plots",
                     plotOutput("pair_plot", height = "800px")
+                ),
+                tabPanel("Coefficient Correlation Matrix",
+                h4("Correlation Matrix of Model Terms"),
+                tableOutput("coeff_cor_table")
                 )
             )
         )
@@ -153,6 +157,24 @@ server = function(input, output, session){
             model_type = input$plot_model_type
         )
     })
+
+    output$coeff_cor_table <- renderTable({
+    req(input$plot_model_type)
+    
+    # Identify the active model
+    model_to_display <- switch(input$plot_model_type,
+        "Poisson" = poisson_model(),
+        "Quasipoisson" = quasi_poisson_model(),
+        "Negative Binomial" = nb_model(),
+        "ZINB" = zinb_model()
+        #add Zip model
+    )
+    
+    req(model_to_display)
+    
+    # Generate the correlation table
+    get_coeff_correlation_matrix(model_to_display)
+}, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
 
     output$response_ui = renderUI({
     req(data())
