@@ -9,6 +9,9 @@ ui = fluidPage(
             fileInput("file", "Upload CSV File", accept = ".csv"),
             uiOutput("response_ui"),
             uiOutput("predictor_ui"),
+            selectInput("plot_model_type", "Select Model Type for Plotting", 
+                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
+            hr(),
             actionButton("fit_poisson", "Fit Poisson Model"),
             br(), br(),
             actionButton("fit_quasi_poisson", "Fit Quasi Poisson Model"),
@@ -45,6 +48,9 @@ ui = fluidPage(
                         verbatimTextOutput("zinb_model_formula"),
                         h4("Incidence Rate Ratios"),
                         tableOutput("zinb_irr_table")
+                ),
+                tabPanel("Pairwise Plots",
+                    plotOutput("pair_plot", height = "800px")
                 )
             )
         )
@@ -134,6 +140,17 @@ server = function(input, output, session){
     output$zinb_irr_table = renderTable({
         req(zinb_model())
         get_zinb_irr_table(zinb_model())
+    })
+
+    output$pair_plot <- renderPlot({
+        req(data(), input$response, input$predictors, input$plot_model_type)
+    
+        plot_count_pairs(
+            df = data(), 
+            response = input$response, 
+            predictors = input$predictors, 
+            model_type = input$plot_model_type
+        )
     })
 
     output$response_ui = renderUI({
