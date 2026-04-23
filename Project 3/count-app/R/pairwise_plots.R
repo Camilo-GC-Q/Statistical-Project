@@ -9,54 +9,62 @@ fit_custom_model <- function(formula, data, type = "poisson") {
 }
 
 plot_count_pairs = function(df, response, predictors, model_type = "poisson"){
-    if (length(predictors) == 0){
-        stop("Please choose at least one predictor")
-    }
+    
+    # 1. Ensure factors are treated as factors
+    df <- df |> mutate(across(where(is.character), as.factor))
+    
+    # 2. Define standard theme
+    my_theme <- theme_bw() + theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5))
 
     vars_needed = c(response, predictors)
+    plot_data = df |> select(all_of(vars_needed)) |> drop_na()
 
-    plot_data = df |>
-        select(all_of(vars_needed)) |>
-        drop_na()
-
-    # Convert response to numeric if needed
-    plot_data[[response]] = as.numeric(plot_data[[response]])
+    # Define custom GLM fitter
+    model_func = function(formula, data, ...) {
+        fit_custom_model(formula, data, type = model_type)
+    }
 
     suppressWarnings(suppressMessages(GGally::ggpairs(
         plot_data,
         columns = 1:ncol(plot_data),
 
-        # lower: scatter with smoothing
-        lower = list(continuous = function(data, mapping){
-        ggplot(data, mapping) +
-            geom_point(alpha = 0.4) +
-            geom_smooth(
-                method = function(formula, data, ...) {
-                fit_custom_model(formula, data, type = model_type)
-                },
-                se = FALSE,
-                na.rm = TRUE,
-                show.legend = FALSE
-            ) +
-            theme_bw()
-        }),
+        # LOWER: Regression for continuous, Boxplot for combos
+        lower = list(
+            continuous = function(data, mapping){
+                ggplot(data, mapping) + geom_point(alpha = 0.4) +
+                    geom_smooth(method = model_func, se = FALSE) + my_theme
+            },
+            combo = function(data, mapping) {
+                ggplot(data, mapping) + geom_boxplot() + my_theme
+            },
+            discrete = function(data, mapping) {
+                ggplot(data, mapping) + geom_count() + my_theme
+            }
+        ),
 
-        # diagonal: histogram for counts
-        diag = list(continuous = function(data, mapping){
-            ggplot(data, mapping) +
-            geom_histogram(bins = 20)+
-            theme_bw()
-        }),
+        # DIAGONAL: Histograms
+        diag = list(
+            continuous = function(data, mapping){
+                ggplot(data, mapping) + geom_histogram(bins = 20) + my_theme
+            },
+            discrete = function(data, mapping){
+                ggplot(data, mapping) + geom_bar() + my_theme
+            }
+        ),
 
-        # upper: correlations
-        upper = list(continuous = function(data, mapping){
-            GGally::wrap("cor", size = 4)(data, mapping) +
-            theme_bw() +
-            theme(
-                panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
-            )
-        })
-
-        
+        # UPPER: Correlations (Continuous) + Blank/Labels for Categorical
+        upper = list(
+            continuous = function(data, mapping){
+                GGally::wrap("cor", size = 4)(data, mapping) + my_theme
+            },
+            combo = function(data, mapping) {
+                # Return empty plot for combo
+                ggplot() + theme_void()
+            },
+            discrete = function(data, mapping) {
+                # Return empty plot for discrete
+                ggplot() + theme_void()
+            }
+        )
     )))
 }

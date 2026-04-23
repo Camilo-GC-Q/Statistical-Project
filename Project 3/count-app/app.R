@@ -1,5 +1,6 @@
 library(shiny)
 library(tidyverse)
+library(shinyWidgets)
 list.files("R", full.names = TRUE) |> purrr::walk(source)
 
 ui = fluidPage(
@@ -162,15 +163,26 @@ server = function(input, output, session){
       choices = names(data())[sapply(data(), is.numeric)]
     )
     })
+
     output$predictor_ui = renderUI({
         req(data(), input$response)
-
-        selectInput(
-            "predictors",
-            "Select Predictor Variable(s)",
-            choices = setdiff(names(data()), input$response),
-            multiple = TRUE
-        )
+    
+    all_vars <- setdiff(names(data()), input$response)
+    
+    # Separate columns into lists
+    numerics <- all_vars[sapply(data()[, all_vars, drop = FALSE], is.numeric)]
+    categoricals <- all_vars[sapply(data()[, all_vars, drop = FALSE], function(x) !is.numeric(x))]
+    
+    pickerInput(
+        "predictors",
+        "Select Predictor Variable(s)",
+        choices = list(
+            "Numeric" = numerics,
+            "Categorical" = categoricals
+        ),
+        options = list(`actions-box` = TRUE),
+        multiple = TRUE
+    )
     })
 
     # Data Preview
