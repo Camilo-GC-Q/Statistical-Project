@@ -56,6 +56,9 @@ ui = fluidPage(
                 tabPanel("Coefficient Correlation Matrix",
                 h4("Correlation Matrix of Model Terms"),
                 tableOutput("coeff_cor_table")
+                ),
+                tabPanel("Residual Diagnostics",
+                    plotOutput("residual_plot", height = "700px")
                 )
             )
         )
@@ -160,6 +163,17 @@ server = function(input, output, session){
 
     output$coeff_cor_table <- renderTable({
     req(input$plot_model_type)
+
+    output$residual_plot = renderPlot({
+        model_to_use = switch(input$plot_model_type,
+            "Poisson" = poisson_model(),
+            "Quasipoisson" = quasi_poisson_model(),
+            "Negative Binomial" = nb_model(),
+            "ZINB" = zinb_model()
+        )
+        req(model_to_use)
+        plotResiduals(model_to_use)
+    })
     
     # Identify the active model
     model_to_display <- switch(input$plot_model_type,
