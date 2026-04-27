@@ -19,6 +19,8 @@ ui = fluidPage(
             br(), br(),
             actionButton("fit_nb", "Fit Negative Binomial Model"),
             br(), br(),
+            actionButton("fit_zip", "Fit Zero-Inflated Poisson Model"),
+            br(), br(),
             actionButton("fit_zinb", "Fit Zero-Inflated Negative Binomial Model")
         ),
         mainPanel(
@@ -29,6 +31,14 @@ ui = fluidPage(
                 tabPanel("Count Summary",
                         verbatimTextOutput("summary_stats"),
                         plotOutput("count_plot")
+                ),
+                tabPanel("Assumptions"
+                ),
+                tabPanel("Outliers"
+                ),
+                tabPanel("Interpretation"
+                ),
+                tabPanel("Interaction"
                 ),
                 tabPanel("Poisson Model",
                         verbatimTextOutput("model_formula"),
@@ -44,6 +54,11 @@ ui = fluidPage(
                         verbatimTextOutput("nb_model_formula"),
                         h4("Incidence Rate Ratios"),
                         tableOutput("irr_table")
+                ),
+                tabPanel("Zero-Inflated Poisson Model",
+                        verbatimTextOutput("zip_model_formula"),
+                        h4("Incidence Rate Ratios"),
+                        tableOutput("zip_irr_table")
                 ),
                 tabPanel("Zero-Inflated Negative Binomial Model",
                         verbatimTextOutput("zinb_model_formula"),
@@ -93,6 +108,11 @@ server = function(input, output, session){
         fit_zinb_model(data(), input$response, input$predictors)
     })
 
+    zip_model = eventReactive(input$fit_zip, {
+        req(data(), input$response, input$predictors)
+        fit_zip_model(data(), input$response, input$predictors)
+    })
+
     output$model_formula = renderPrint({
         req(input$response, input$predictors)
 
@@ -114,6 +134,11 @@ server = function(input, output, session){
     })
 
     output$zinb_model_formula = renderPrint({
+        req(input$response, input$predictors)
+        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
+    })
+
+    output$zip_model_formula = renderPrint({
         req(input$response, input$predictors)
         cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
     })
@@ -148,6 +173,11 @@ server = function(input, output, session){
     output$zinb_irr_table = renderTable({
         req(zinb_model())
         get_zinb_irr_table(zinb_model())
+    })
+
+    output$zip_irr_table = renderTable({
+        req(zip_model())
+        get_zip_irr_table(zip_model())
     })
 
     output$pair_plot <- renderPlot({
@@ -190,7 +220,7 @@ server = function(input, output, session){
 }, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
 
     output$response_ui = renderUI({
-        
+
     req(data())
     
     selectInput(
