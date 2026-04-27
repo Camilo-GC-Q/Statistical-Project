@@ -32,7 +32,29 @@ ui = fluidPage(
                         verbatimTextOutput("summary_stats"),
                         plotOutput("count_plot")
                 ),
-                tabPanel("Assumptions"
+                tabPanel("Assumptions",
+                sidebarLayout(
+    sidebarPanel(
+      tags$p(
+        tags$strong("Step 1:"), 
+        " Confirm the assumptions below that must be verified by study design."
+      ),
+      checkboxInput("assume_independent",
+        "Observations are random and independent", value = FALSE),
+      hr(),
+      tags$p(
+        tags$strong("Step 2:"), 
+        " Fit a Poisson model, then click to run automated checks."
+      ),
+      actionButton("check_poisson_assumptions", "Check Assumptions",
+                   class = "btn btn-primary"),
+      br(), br(),
+      uiOutput("assumption_checks_ui")
+    ),
+    mainPanel(
+      plotOutput("poisson_assumption_plots", height = "700px")
+    )
+  )
                 ),
                 tabPanel("Outliers"
                 ),
@@ -113,6 +135,11 @@ server = function(input, output, session){
         fit_zip_model(data(), input$response, input$predictors)
     })
 
+    poisson_assumptions = eventReactive(input$check_poisson_assumptions, {
+        req(poisson_model(), data(), input$response, input$predictors)
+        check_poisson_assumptions(poisson_model(), data(), input$response, input$predictors)
+    })
+
     output$model_formula = renderPrint({
         req(input$response, input$predictors)
 
@@ -191,6 +218,59 @@ server = function(input, output, session){
         )
     })
 
+    output$assumption_checks_ui = renderUI({
+  req(poisson_assumptions())
+  a <- poisson_assumptions()
+  
+  make_item <- function(label, result, extra_ui = NULL) {
+    icon_col <- if (result$flagged) "red" else "darkgreen"
+    icon     <- if (result$flagged) "\u274c" else "\u2705"
+    tagList(
+      tags$div(
+        style = "margin-bottom:10px;",
+        tags$span(icon, style = paste0("color:", icon_col, "; font-size:1.1em;")),
+        tags$strong(paste0(" ", label)),
+        tags$br(),
+        tags$span(
+          result$message,
+          style = paste0("color:", icon_col, ";")
+        ),
+        if (!is.null(extra_ui)) extra_ui
+      ),
+      tags$hr(style = "margin:6px 0;")
+    )
+  }
+  
+  # VIF table (shown only if computed)
+  vif_ui <- if (!is.null(a$multicollinearity$vif_table)) {
+    tagList(
+      tags$br(),
+      renderTable(a$multicollinearity$vif_table, digits = 3)
+    )
+  } else NULL
+  
+  # EPP detail
+  epp_detail <- tags$small(
+    glue::glue(
+      " | n = {a$events_per_pred$total_events} total events, ",
+      "{a$events_per_pred$n_predictors} predictor(s), ",
+      "EPP = {a$events_per_pred$epp}"
+    )
+  )
+  
+  tagList(
+    tags$h4("Poisson Assumption Checks"),
+    make_item("1. Count Response Variable",                     a$count_response),
+    make_item("2. Mean\u2013Variance Equality (Equidispersion)", a$mean_variance),
+    make_item("3. Overdispersion (Deviance / df)",              a$overdispersion),
+    make_item("4. Excess Zeros",                                a$zero_inflation),
+    make_item("5. Linearity of log(\u03bb) in Predictors",      a$linearity),
+    make_item("6. Multicollinearity (VIF)",                     a$multicollinearity, vif_ui),
+    make_item("7. Events Per Predictor",                        a$events_per_pred, epp_detail),
+    make_item("8. Goodness of Fit (Pearson \u03c7\u00b2)",      a$goodness_of_fit)
+  )
+})
+
     output$coeff_cor_table <- renderTable({
     req(input$plot_model_type)
 
@@ -212,6 +292,8 @@ server = function(input, output, session){
         "Negative Binomial" = nb_model(),
         "ZINB" = zinb_model()
     )
+
+    
     
     req(model_to_display)
     
