@@ -167,7 +167,6 @@ server = function(input, output, session){
         "Quasipoisson" = quasi_poisson_model(),
         "Negative Binomial" = nb_model(),
         "ZINB" = zinb_model()
-        #add Zip model
     )
     
     req(model_to_display)
@@ -177,12 +176,13 @@ server = function(input, output, session){
 }, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
 
     output$response_ui = renderUI({
+        
     req(data())
     
     selectInput(
-      "response",
-      "Select Response Variable (Count)",
-      choices = names(data())[sapply(data(), is.numeric)]
+        "response",
+        "Select Response Variable (Count)",
+        choices = names(data())[sapply(data(), is.numeric)]
     )
     })
 
