@@ -1,7 +1,6 @@
 plotResiduals = function(mod){
     require(tidyverse)
     require(patchwork)
-
     e = tryCatch(
         residuals(mod, type = "deviance"),
         error = function(err) residuals(mod, type = "response")
