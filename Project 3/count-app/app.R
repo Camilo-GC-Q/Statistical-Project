@@ -70,7 +70,14 @@ ui = fluidPage(
                     )
                 ),
                 tabPanel("Outliers"),
-                tabPanel("Interpretation"),
+                tabPanel("Interpretation",
+    br(),
+    selectInput("interp_model_type", "Select Model to Interpret",
+        choices = c("Poisson", "Quasipoisson", 
+                    "Negative Binomial", "ZIP", "ZINB")
+    ),
+    uiOutput("interpretation_ui")
+),
                 tabPanel("Interaction"),
                 tabPanel("Poisson Model",
                     verbatimTextOutput("model_formula"),
@@ -227,6 +234,61 @@ server = function(input, output, session){
         req(poisson_model())
         plotResiduals(poisson_model())
     }, height = 700)
+
+    output$interpretation_ui = renderUI({
+    req(input$interp_model_type)
+    
+    model <- tryCatch(
+        resolve_model(input$interp_model_type),
+        error = function(e) NULL
+    )
+    
+    if (is.null(model)) {
+        return(tags$p("Please fit this model first.", style = "color:grey;"))
+    }
+    
+    interp <- interpret_count_model(model, input$response, input$predictors)
+    
+    # Count component
+    count_items <- purrr::map(interp$count_sentences, function(s) {
+        tags$li(s, style = "margin-bottom: 8px;")
+    })
+    
+    out <- tagList(
+        tags$h3(paste(interp$model_label, "— Interpretation")),
+        tags$h4("Count Component"),
+        tags$ul(count_items)
+    )
+    
+    # Zero component (ZIP/ZINB only)
+    if (interp$is_zeroinfl && !is.null(interp$zero_sentences)) {
+        zero_items <- purrr::map(interp$zero_sentences, function(s) {
+            tags$li(s, style = "margin-bottom: 8px;")
+        })
+        out <- tagList(
+            out,
+            tags$hr(),
+            tags$h4("Zero-Inflation Component"),
+            tags$p(tags$em(
+                "These coefficients are on the log-odds scale. ",
+                "Exponentiated values are odds ratios for being a structural zero."
+            )),
+            tags$ul(zero_items)
+        )
+    }
+    
+    # Quasi-Poisson note
+    if (input$interp_model_type == "Quasipoisson") {
+        out <- tagList(out, tags$hr(), tags$p(
+            tags$strong("Note: "),
+            "Quasi-Poisson adjusts standard errors for overdispersion but ",
+            "rate ratio point estimates are identical to Poisson. ",
+            "Inference (p-values, CIs) is more reliable when overdispersion is present."
+        ))
+    }
+    
+    out
+})
 
     # ── Assumption checks ────────────────────────────────────────────────────
     output$vif_table_output = renderTable({
