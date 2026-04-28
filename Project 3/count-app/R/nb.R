@@ -2,9 +2,7 @@ fit_negative_binomial_model = function(df, response, predictors, formula_str = N
     if (length(predictors) == 0){
         stop("Please choose at least one predictor")
     }
-    vars_needed = c(response, predictors)
     model_data = df |>
-        select(all_of(vars_needed)) |>
         drop_na()
 
     fml_str <- if (!is.null(formula_str)) formula_str else
