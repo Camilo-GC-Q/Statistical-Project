@@ -1,5 +1,4 @@
-
-fit_poisson_model = function(df, response, predictors){
+fit_poisson_model = function(df, response, predictors, formula_str = NULL){
 
     if (length(predictors) == 0){
         stop("Please choose at least one predictor")
@@ -11,10 +10,11 @@ fit_poisson_model = function(df, response, predictors){
         select(all_of(vars_needed)) |>
         drop_na()
 
-    formula_text = paste(response, "~", paste(predictors, collapse = " + "))
+    fml_str <- if (!is.null(formula_str)) formula_str else
+                    paste(response, "~", paste(predictors, collapse = " + "))
 
-    model_formula <- as.formula(formula_text)
-  
+    model_formula <- as.formula(fml_str)
+    
     glm(model_formula, family = poisson(link = "log"), data = model_data)
 }
 

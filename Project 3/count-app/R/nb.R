@@ -1,4 +1,4 @@
-fit_negative_binomial_model = function(df, response, predictors){
+fit_negative_binomial_model = function(df, response, predictors, formula_str = NULL){
     if (length(predictors) == 0){
         stop("Please choose at least one predictor")
     }
@@ -6,8 +6,11 @@ fit_negative_binomial_model = function(df, response, predictors){
     model_data = df |>
         select(all_of(vars_needed)) |>
         drop_na()
-    formula_text = paste(response, "~", paste(predictors, collapse = " + "))
-    model_formula <- as.formula(formula_text)
+
+    fml_str <- if (!is.null(formula_str)) formula_str else
+        paste(response, "~", paste(predictors, collapse = " + "))
+
+    model_formula <- as.formula(fml_str)
     MASS::glm.nb(model_formula, data = model_data)
 }
 

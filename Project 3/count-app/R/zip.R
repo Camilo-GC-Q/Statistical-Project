@@ -1,5 +1,5 @@
 
-fit_zip_model = function(df, response, predictors){
+fit_zip_model = function(df, response, predictors, formula_str = NULL){
     if(length(predictors) == 0){
         stop("Please choose at least one predictor")
     }
@@ -10,8 +10,10 @@ fit_zip_model = function(df, response, predictors){
         select(all_of(vars_needed)) |>
         drop_na()
 
-    formula_text = paste(response, "~", paste(predictors, collapse = " + "))
-    model_formula = as.formula(formula_text)
+    fml_str <- if (!is.null(formula_str)) formula_str else
+        paste(response, "~", paste(predictors, collapse = " + "))
+
+    model_formula <- as.formula(fml_str)
 
     pscl::zeroinfl(model_formula, data = model_data, dist = "poisson")
 }
