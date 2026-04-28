@@ -13,17 +13,13 @@ ui = fluidPage(
             uiOutput("interaction_ui"),
             uiOutput("offset_ui"),
             selectInput("plot_model_type", "Select Model Type for Plotting",
-                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
+                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "Zero-Inflated Poisson",
+                "Zero-Inflated Negative Binomial")),
             hr(),
-            actionButton("fit_poisson", "Fit Poisson Model"),
-            br(), br(),
-            actionButton("fit_quasi_poisson", "Fit Quasi Poisson Model"),
-            br(), br(),
-            actionButton("fit_nb", "Fit Negative Binomial Model"),
-            br(), br(),
-            actionButton("fit_zip", "Fit Zero-Inflated Poisson Model"),
-            br(), br(),
-            actionButton("fit_zinb", "Fit Zero-Inflated Negative Binomial Model")
+            selectInput("model_type", "Select Model to Fit",
+                choices = c("Poisson", "Quasipoisson", "Negative Binomial",
+                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial")),
+            actionButton("fit_model", "Fit Model", class = "btn btn-primary")
         ),
         mainPanel(
             tabsetPanel(
@@ -174,35 +170,6 @@ server = function(input, output, session){
     })
 
     # Fitting model
-    poisson_model = eventReactive(input$fit_poisson, {
-        req(data(), input$response, input$predictors)
-        fit_poisson_model(data(), input$response, input$predictors,
-        formula_str = build_formula())
-    })
-
-    nb_model = eventReactive(input$fit_nb, {
-        req(data(), input$response, input$predictors)
-        fit_negative_binomial_model(data(), input$response, input$predictors,
-        formula_str = build_formula())
-    })
-
-    quasi_poisson_model = eventReactive(input$fit_quasi_poisson, {
-        req(data(), input$response, input$predictors)
-        fit_quasi_poisson_model(data(), input$response, input$predictors,
-        formula_str = build_formula())
-    })
-
-    zinb_model = eventReactive(input$fit_zinb, {
-        req(data(), input$response, input$predictors)
-        fit_zinb_model(data(), input$response, input$predictors,
-        formula_str = build_formula())
-    })
-
-    zip_model = eventReactive(input$fit_zip, {
-        req(data(), input$response, input$predictors)
-        fit_zip_model(data(), input$response, input$predictors,
-        formula_str = build_formula())
-    })
 
     poisson_assumptions = eventReactive(input$check_poisson_assumptions, {
         req(poisson_model(), data(), input$response, input$predictors)
@@ -210,15 +177,34 @@ server = function(input, output, session){
     })
 
     # Model Resolver
-    resolve_model = function(type) {
-        switch(type,
-            "Poisson"           = poisson_model(),
-            "Quasipoisson"      = quasi_poisson_model(),
-            "Negative Binomial" = nb_model(),
-            "ZIP"               = zip_model(),
-            "ZINB"              = zinb_model()
+    fitted_models = reactiveValues(
+        Poisson           = NULL,
+        Quasipoisson      = NULL,
+        `Negative Binomial` = NULL,
+        `Zero-Inflated Poisson` = NULL,
+        `Zero-Inflated Negative Binomial` = NULL
+    )
+
+    observeEvent(input$fit_model, {
+        req(data(), input$response, input$predictors, input$model_type)
+        fml <- build_formula()
+
+        fitted_models[[input$model_type]] <- switch(input$model_type,
+            "Poisson"           = fit_poisson_model(data(), input$response, input$predictors, formula_str = fml),
+            "Quasipoisson"      = fit_quasi_poisson_model(data(), input$response, input$predictors, formula_str = fml),
+            "Negative Binomial" = fit_negative_binomial_model(data(), input$response, input$predictors, formula_str = fml),
+            "Zero-Inflated Poisson" = fit_zip_model(data(), input$response, input$predictors, formula_str = fml),
+            "Zero-Inflated Negative Binomial"  = fit_zinb_model(data(), input$response, input$predictors, formula_str = fml)
         )
-    }
+    })
+
+    resolve_model = function(type) fitted_models[[type]]
+
+    poisson_model       = reactive(fitted_models[["Poisson"]])
+    quasi_poisson_model = reactive(fitted_models[["Quasipoisson"]])
+    nb_model            = reactive(fitted_models[["Negative Binomial"]])
+    zip_model           = reactive(fitted_models[["Zero-Inflated Poisson"]])
+    zinb_model          = reactive(fitted_models[["Zero-Inflated Negative Binomial"]])
 
     # Formula display 
     formula_render = function() {
