@@ -11,6 +11,7 @@ ui = fluidPage(
             uiOutput("response_ui"),
             uiOutput("predictor_ui"),
             uiOutput("interaction_ui"),
+            uiOutput("offset_ui"),
             selectInput("plot_model_type", "Select Model Type for Plotting",
                 choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
             hr(),
@@ -141,6 +142,14 @@ server = function(input, output, session){
         )
     })
 
+    # Offset application
+    output$offset_ui = renderUI({
+        req(data(), input$response)
+        numerics = names(data())[sapply(data(), is.numeric)]
+        numerics = setdiff(numerics, input$response)
+        selectInput("offset_var", "Select Offset Variable", choices = c("None" = "", numerics))
+    })
+
     # Formula builder
     build_formula = reactive({
         req(input$response, input$predictors)
@@ -155,8 +164,13 @@ server = function(input, output, session){
             }, character(1))
             rhs_terms <- c(rhs_terms, ixn_terms)
         }
+        formula_str = paste(input$response, "~", paste(rhs_terms, collapse = " + "))
 
-        paste(input$response, "~", paste(rhs_terms, collapse = " + "))
+        if(!is.null(input$offset_var) && nzchar(input$offset_var)){
+            formula_str = paste(formula_str, "+ offset(log(", input$offset_var, "))")
+        }
+
+        formula_str
     })
 
     # Fitting model
