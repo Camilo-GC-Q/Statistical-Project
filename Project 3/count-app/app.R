@@ -28,10 +28,22 @@ ui = fluidPage(
                 tabPanel("Data Preview",
                     tableOutput("preview")
                 ),
-                tabPanel("Count Summary",
-                    verbatimTextOutput("summary_stats"),
-                    plotOutput("count_plot")
-                ),
+                tabPanel("Data Summary",
+    verbatimTextOutput("summary_stats"),
+    plotOutput("count_plot"),
+    hr(),
+    h4("Pairwise Plots"),
+    selectInput("plot_model_type", "Select Model Type for Plotting",
+        choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
+    plotOutput("pair_plot", height = "800px"),
+    hr(),
+    h4("Correlation Matrix of Model Terms"),
+    selectInput("cor_model_type", "Select Model",
+        choices = c("Poisson", "Quasipoisson", 
+                    "Negative Binomial", "ZIP", "ZINB")
+    ),
+    tableOutput("coeff_cor_table")
+),
                 tabPanel("Assumptions",
                     sidebarLayout(
                         sidebarPanel(
@@ -84,13 +96,6 @@ ui = fluidPage(
                     verbatimTextOutput("zinb_model_formula"),
                     h4("Incidence Rate Ratios"),
                     tableOutput("zinb_irr_table")
-                ),
-                tabPanel("Pairwise Plots",
-                    plotOutput("pair_plot", height = "800px")
-                ),
-                tabPanel("Coefficient Correlation Matrix",
-                    h4("Correlation Matrix of Model Terms"),
-                    tableOutput("coeff_cor_table")
                 )
             )
         )
@@ -211,11 +216,11 @@ server = function(input, output, session){
 
     # ── Coefficient correlation matrix ───────────────────────────────────────
     output$coeff_cor_table = renderTable({
-        req(input$plot_model_type)
-        model_to_display <- resolve_model(input$plot_model_type)
-        req(model_to_display)
-        get_coeff_correlation_matrix(model_to_display)
-    }, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
+    req(input$cor_model_type)
+    model_to_display <- resolve_model(input$cor_model_type)
+    req(model_to_display)
+    get_coeff_correlation_matrix(model_to_display)
+}, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
 
     # ── Residual diagnostics (standalone tab removed, lives in Assumptions) ──
     output$assumption_residual_plot = renderPlot({
