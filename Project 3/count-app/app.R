@@ -10,6 +10,7 @@ ui = fluidPage(
             fileInput("file", "Upload CSV File", accept = ".csv"),
             uiOutput("response_ui"),
             uiOutput("predictor_ui"),
+            uiOutput("interaction_ui"),
             selectInput("plot_model_type", "Select Model Type for Plotting",
                 choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
             hr(),
@@ -29,21 +30,20 @@ ui = fluidPage(
                     tableOutput("preview")
                 ),
                 tabPanel("Data Summary",
-    verbatimTextOutput("summary_stats"),
-    plotOutput("count_plot"),
-    hr(),
-    h4("Pairwise Plots"),
-    selectInput("plot_model_type", "Select Model Type for Plotting",
-        choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
-    plotOutput("pair_plot", height = "800px"),
-    hr(),
-    h4("Correlation Matrix of Model Terms"),
-    selectInput("cor_model_type", "Select Model",
-        choices = c("Poisson", "Quasipoisson", 
-                    "Negative Binomial", "ZIP", "ZINB")
-    ),
-    tableOutput("coeff_cor_table")
-),
+                    verbatimTextOutput("summary_stats"),
+                    plotOutput("count_plot"),
+                    hr(),
+                    h4("Pairwise Plots"),
+                    selectInput("plot_model_type", "Select Model Type for Plotting",
+                                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
+                    plotOutput("pair_plot", height = "800px"),
+                    hr(),
+                    h4("Correlation Matrix of Model Terms"),
+                    selectInput("cor_model_type", "Select Model",
+                                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")
+                    ),
+                    tableOutput("coeff_cor_table")
+                ),
                 tabPanel("Assumptions",
                     sidebarLayout(
                         sidebarPanel(
@@ -71,13 +71,12 @@ ui = fluidPage(
                 ),
                 tabPanel("Outliers"),
                 tabPanel("Interpretation",
-    br(),
-    selectInput("interp_model_type", "Select Model to Interpret",
-        choices = c("Poisson", "Quasipoisson", 
-                    "Negative Binomial", "ZIP", "ZINB")
-    ),
-    uiOutput("interpretation_ui")
-),
+                    br(),
+                    selectInput("interp_model_type", "Select Model to Interpret",
+                    choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")
+                    ),
+                    uiOutput("interpretation_ui")
+                ),
                 tabPanel("Interaction"),
                 tabPanel("Poisson Model",
                     verbatimTextOutput("model_formula"),
@@ -111,34 +110,84 @@ ui = fluidPage(
 
 server = function(input, output, session){
 
+    # Data input
     data = reactive({
         req(input$file)
         read_csv(input$file$datapath)
     })
 
+    # Interaction coefficient 
+    output$interaction_ui = renderUI({
+        req(input$predictors)
+        preds <- input$predictors
+        if (length(preds) < 2) return(NULL)
+
+        # Build all unique pairs
+        pairs <- combn(preds, 2, simplify = FALSE)
+        pair_keys    <- vapply(pairs, \(p) paste(p, collapse = "|||"), character(1))
+        pair_labels  <- vapply(pairs, \(p) paste(p, collapse = " \u00d7 "), character(1))
+        names(pair_keys) <- pair_labels
+
+        tagList(
+            pickerInput(
+                "interactions",
+                "Select Interaction Terms",
+                choices  = pair_keys,
+                choicesOpt = list(content = pair_labels),
+                options  = list(`actions-box` = TRUE,
+                                `none-selected-text` = "No interactions"),
+                multiple = TRUE
+            )
+        )
+    })
+
+    # Formula builder
+    build_formula = reactive({
+        req(input$response, input$predictors)
+        preds  <- input$predictors
+        ixn    <- input$interactions 
+
+        rhs_terms <- preds
+        if (length(ixn) > 0) {
+            ixn_terms <- vapply(ixn, \(k) {
+                parts <- strsplit(k, "\\|\\|\\|")[[1]]
+                paste(parts, collapse = ":")
+            }, character(1))
+            rhs_terms <- c(rhs_terms, ixn_terms)
+        }
+
+        paste(input$response, "~", paste(rhs_terms, collapse = " + "))
+    })
+
+    # Fitting model
     poisson_model = eventReactive(input$fit_poisson, {
         req(data(), input$response, input$predictors)
-        fit_poisson_model(data(), input$response, input$predictors)
+        fit_poisson_model(data(), input$response, input$predictors,
+        formula_str = build_formula())
     })
 
     nb_model = eventReactive(input$fit_nb, {
         req(data(), input$response, input$predictors)
-        fit_negative_binomial_model(data(), input$response, input$predictors)
+        fit_negative_binomial_model(data(), input$response, input$predictors,
+        formula_str = build_formula())
     })
 
     quasi_poisson_model = eventReactive(input$fit_quasi_poisson, {
         req(data(), input$response, input$predictors)
-        fit_quasi_poisson_model(data(), input$response, input$predictors)
+        fit_quasi_poisson_model(data(), input$response, input$predictors,
+        formula_str = build_formula())
     })
 
     zinb_model = eventReactive(input$fit_zinb, {
         req(data(), input$response, input$predictors)
-        fit_zinb_model(data(), input$response, input$predictors)
+        fit_zinb_model(data(), input$response, input$predictors,
+        formula_str = build_formula())
     })
 
     zip_model = eventReactive(input$fit_zip, {
         req(data(), input$response, input$predictors)
-        fit_zip_model(data(), input$response, input$predictors)
+        fit_zip_model(data(), input$response, input$predictors,
+        formula_str = build_formula())
     })
 
     poisson_assumptions = eventReactive(input$check_poisson_assumptions, {
@@ -146,7 +195,7 @@ server = function(input, output, session){
         check_poisson_assumptions(poisson_model(), data(), input$response, input$predictors)
     })
 
-    # Helper to resolve the active model from a selector input
+    # Model Resolver
     resolve_model = function(type) {
         switch(type,
             "Poisson"           = poisson_model(),
@@ -157,34 +206,20 @@ server = function(input, output, session){
         )
     }
 
-    # ── Formulas ────────────────────────────────────────────────────────────
-    output$model_formula = renderPrint({
+    # Formula display 
+    formula_render = function() {
         req(input$response, input$predictors)
         validate(need(length(input$predictors) > 0, "Please select at least one predictor."))
-        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
-    })
+        cat(build_formula())
+    }
 
-    output$nb_model_formula = renderPrint({
-        req(input$response, input$predictors)
-        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
-    })
+    output$model_formula         = renderPrint(formula_render())
+    output$nb_model_formula      = renderPrint(formula_render())
+    output$quasi_poisson_formula = renderPrint(formula_render())
+    output$zinb_model_formula    = renderPrint(formula_render())
+    output$zip_model_formula     = renderPrint(formula_render())
 
-    output$quasi_poisson_formula = renderPrint({
-        req(input$response, input$predictors)
-        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
-    })
-
-    output$zinb_model_formula = renderPrint({
-        req(input$response, input$predictors)
-        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
-    })
-
-    output$zip_model_formula = renderPrint({
-        req(input$response, input$predictors)
-        cat(paste(input$response, "~", paste(input$predictors, collapse = " + ")))
-    })
-
-    # ── Model tables ─────────────────────────────────────────────────────────
+    # Model tables
     output$rate_ratio_table = renderTable({
         req(poisson_model())
         get_rate_ratio_table(poisson_model())
@@ -210,7 +245,7 @@ server = function(input, output, session){
         get_zip_irr_table(zip_model())
     })
 
-    # ── Pairwise plots ───────────────────────────────────────────────────────
+    # Pairwise plots 
     output$pair_plot = renderPlot({
         req(data(), input$response, input$predictors, input$plot_model_type)
         plot_count_pairs(
@@ -221,61 +256,62 @@ server = function(input, output, session){
         )
     })
 
-    # ── Coefficient correlation matrix ───────────────────────────────────────
+    # Coefficient correlation matrix
     output$coeff_cor_table = renderTable({
     req(input$cor_model_type)
     model_to_display <- resolve_model(input$cor_model_type)
     req(model_to_display)
     get_coeff_correlation_matrix(model_to_display)
-}, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
+    }, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
 
-    # ── Residual diagnostics (standalone tab removed, lives in Assumptions) ──
+    # Residual diagnostics 
     output$assumption_residual_plot = renderPlot({
         req(poisson_model())
         plotResiduals(poisson_model())
     }, height = 700)
 
+    # Interpretation
     output$interpretation_ui = renderUI({
-    req(input$interp_model_type)
+        req(input$interp_model_type)
     
-    model <- tryCatch(
-        resolve_model(input$interp_model_type),
-        error = function(e) NULL
-    )
+        model <- tryCatch(
+            resolve_model(input$interp_model_type),
+            error = function(e) NULL
+        )
     
-    if (is.null(model)) {
-        return(tags$p("Please fit this model first.", style = "color:grey;"))
-    }
+        if (is.null(model)) {
+            return(tags$p("Please fit this model first.", style = "color:grey;"))
+        }
     
-    interp <- interpret_count_model(model, input$response, input$predictors)
+        interp <- interpret_count_model(model, input$response, input$predictors)
     
-    # Count component
-    count_items <- purrr::map(interp$count_sentences, function(s) {
-        tags$li(s, style = "margin-bottom: 8px;")
-    })
-    
-    out <- tagList(
-        tags$h3(paste(interp$model_label, "— Interpretation")),
-        tags$h4("Count Component"),
-        tags$ul(count_items)
-    )
-    
-    # Zero component (ZIP/ZINB only)
-    if (interp$is_zeroinfl && !is.null(interp$zero_sentences)) {
-        zero_items <- purrr::map(interp$zero_sentences, function(s) {
+        #Count component
+        count_items <- purrr::map(interp$count_sentences, function(s) {
             tags$li(s, style = "margin-bottom: 8px;")
         })
+    
         out <- tagList(
-            out,
-            tags$hr(),
-            tags$h4("Zero-Inflation Component"),
-            tags$p(tags$em(
-                "These coefficients are on the log-odds scale. ",
-                "Exponentiated values are odds ratios for being a structural zero."
-            )),
-            tags$ul(zero_items)
+            tags$h3(paste(interp$model_label, "— Interpretation")),
+            tags$h4("Count Component"),
+            tags$ul(count_items)
         )
-    }
+    
+        # Zero component
+        if (interp$is_zeroinfl && !is.null(interp$zero_sentences)) {
+            zero_items <- purrr::map(interp$zero_sentences, function(s) {
+                tags$li(s, style = "margin-bottom: 8px;")
+            })
+            out <- tagList(
+                out,
+                tags$hr(),
+                tags$h4("Zero-Inflation Component"),
+                tags$p(tags$em(
+                    "These coefficients are on the log-odds scale. ",
+                    "Exponentiated values are odds ratios for being a structural zero."
+                )),
+                tags$ul(zero_items)
+            )
+        }
     
     # Quasi-Poisson note
     if (input$interp_model_type == "Quasipoisson") {
@@ -286,20 +322,13 @@ server = function(input, output, session){
             "Inference (p-values, CIs) is more reliable when overdispersion is present."
         ))
     }
-    
-    out
-})
+    out})
 
-    # ── Assumption checks ────────────────────────────────────────────────────
+    # Assumption checks
     output$vif_table_output = renderTable({
         req(poisson_assumptions())
         poisson_assumptions()$multicollinearity$vif_table
     }, digits = 3)
-
-    output$poisson_assumption_plots = renderPlot({
-        req(poisson_model(), data(), input$response, input$predictors)
-        plot_poisson_assumptions(poisson_model(), data(), input$response, input$predictors)
-    }, height = 700)
 
     output$assumption_checks_ui = renderUI({
         req(poisson_assumptions())
@@ -340,7 +369,7 @@ server = function(input, output, session){
         )
     })
 
-    # ── Data preview & summary ───────────────────────────────────────────────
+    #Data preview & summary 
     output$preview = renderTable({
         req(data())
         head(data())
