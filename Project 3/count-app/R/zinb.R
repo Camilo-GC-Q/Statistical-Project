@@ -20,19 +20,22 @@ get_zinb_table = function(model){
         mutate(across(where(is.numeric), ~ round(.x, 4)))
 }
 
-get_zinb_irr_table = function(model){
-    parameters::model_parameters(model, exponentiate = FALSE) %>%
-    as.data.frame() %>%
-    transmute(
-        term = Parameter,
-        estimate = Coefficient,
-        rate_ratio = exp(Coefficient),
-        percent_change = 100 * (exp(Coefficient) - 1),
-        std.error = SE,
-        statistic = z,
-        conf.low = exp(CI_low),
-        conf.high = exp(CI_high),
-        p.value = p
-    ) %>%
-    mutate(across(where(is.numeric), ~ round(.x, 4)))
+get_zinb_irr_table = function(model) {
+    params <- parameters::model_parameters(model, exponentiate = FALSE) %>%
+        as.data.frame()
+
+    params %>%
+        transmute(
+            component      = ifelse(Component == "conditional", "Count", "Zero-Inflation"),
+            term           = Parameter,
+            estimate       = round(Coefficient, 4),
+            rate_ratio     = round(exp(Coefficient), 4),
+            percent_change = round(100 * (exp(Coefficient) - 1), 2),
+            std.error      = round(SE, 4),
+            statistic      = round(z, 4),
+            conf.low       = round(exp(CI_low), 4),
+            conf.high      = round(exp(CI_high), 4),
+            p.value        = round(p, 4)
+        ) %>%
+        arrange(component)
 }

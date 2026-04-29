@@ -23,18 +23,32 @@ interpret_count_model = function(model, response, predictors) {
 
   # Extract coefficients 
   if (is_zeroinfl) {
-    coef_df <- broom::tidy(model) %>%
-      mutate(
-        component = ifelse(grepl("^count_", term), "count", "zero"),
-        term      = gsub("^count_|^zero_", "", term)
-      )
-    count_df <- coef_df %>% filter(component == "count")
-    zero_df  <- coef_df %>% filter(component == "zero")
-  } else {
+    params <- parameters::model_parameters(model, exponentiate = FALSE) %>%
+        as.data.frame()
+
+    count_df <- params %>%
+        filter(Component == "conditional") %>%
+        transmute(
+            term      = Parameter,
+            estimate  = Coefficient,
+            std.error = SE,
+            statistic = z,
+            p.value   = p
+        )
+
+    zero_df <- params %>%
+        filter(Component == "zero_inflated") %>%
+        transmute(
+            term      = Parameter,
+            estimate  = Coefficient,
+            std.error = SE,
+            statistic = z,
+            p.value   = p
+        )
+} else {
     count_df <- broom::tidy(model)
     zero_df  <- NULL
-  }
-  
+}
   # Model label
   model_label <- dplyr::case_when(
     is_zeroinfl && grepl("negbin", model$dist)  ~ "Zero-Inflated Negative Binomial",
