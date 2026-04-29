@@ -184,7 +184,7 @@ server = function(input, output, session){
         req(data(), input$response)
         numerics = names(data())[sapply(data(), is.numeric)]
         numerics = setdiff(numerics, input$response)
-        selectInput("offset_var", "Select Offset Variable", choices = c("None" = "", numerics))
+        selectInput("offset_var", "Select Offset Variable", choices = c("None", numerics))
     })
 
     # Formula builder
@@ -203,7 +203,7 @@ server = function(input, output, session){
         }
         formula_str = paste(input$response, "~", paste(rhs_terms, collapse = " + "))
 
-        if(!is.null(input$offset_var) && nzchar(input$offset_var)){
+        if(!is.null(input$offset_var) && input$offset_var != "None"){
             formula_str = paste(formula_str, "+ offset(log(", input$offset_var, "))")
         }
 
