@@ -101,7 +101,21 @@ ui = fluidPage(
                     ),
                     uiOutput("interpretation_ui")
                 ),
-                tabPanel("Interaction"),
+                tabPanel("Interaction",
+                    br(),    
+                    sidebarLayout(
+                        sidebarPanel(
+                            selectInput("jn_model_type", "Select Model",
+                                choices = c("Poisson", "Quasipoisson", "Negative Binomial")),
+                            uiOutput("jn_interaction_ui"),
+                            uiOutput("jn_moderator_ui")
+                        ),
+                        mainPanel(
+                            plotOutput("jn_plot", height = "500px")
+                        )
+                    )  
+                ),
+
                 tabPanel("Poisson Model",
                     verbatimTextOutput("model_formula"),
                     h4("Incidence Rate Ratios"),
@@ -468,6 +482,34 @@ server = function(input, output, session){
             options  = list(`actions-box` = TRUE),
             multiple = TRUE)
     })
+
+    # Jonhson-Neyman Plot
+    output$jn_interaction_ui = renderUI({
+        req(input$interactions)
+        ixn_keys = input$interactions
+        ixn_labels = vapply(ixn_keys, function(k){
+            paste(strsplit(k, "\\|\\|\\|")[[1]], collapse = " \u00d7 ")
+        }, character(1))
+        names(ixn_keys) = ixn_labels
+        selectInput("jn_interaction", "Select Interaction", choices = ixn_keys)
+    })
+
+    output$jn_moderator_ui = renderUI({
+        req(input$jn_interaction)
+        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        selectInput("jn_moderator", "Select Moderator Variable", choices = vars)
+    })
+
+
+    output$jn_plot = renderPlot({
+        req(input$jn_interaction, input$jn_moderator, input$jn_model_type)
+        model = resolve_model(input$jn_model_type)
+        req(model)
+        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        pred = vars[vars != input$jn_moderator]
+        plot_johnson_neyman(model, pred, input$jn_moderator)
+    }, height = 500)
+
 }
 
 shinyApp(ui, server)
