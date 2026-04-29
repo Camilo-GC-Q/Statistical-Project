@@ -85,6 +85,11 @@ ui = fluidPage(
                 ),
                 tabPanel("Interpretation",
                     br(),
+                    h4(textOutput("interp_model_label")),
+                    hr(),
+                    h4("Incidence Rate Ratios"),
+                    tableOutput("dynamic_irr_table"),
+                    hr(),
                     uiOutput("interpretation_ui")
                 ),
                 tabPanel("Interaction",
@@ -98,32 +103,6 @@ ui = fluidPage(
                             plotOutput("jn_plot", height = "500px")
                         )
                     )  
-                ),
-
-                tabPanel("Poisson Model",
-                    verbatimTextOutput("model_formula"),
-                    h4("Incidence Rate Ratios"),
-                    tableOutput("rate_ratio_table")
-                ),
-                tabPanel("Quasi-Poisson Model",
-                    verbatimTextOutput("quasi_poisson_formula"),
-                    h4("Incidence Rate Ratios"),
-                    tableOutput("quasi_irr_table")
-                ),
-                tabPanel("Negative Binomial Model",
-                    verbatimTextOutput("nb_model_formula"),
-                    h4("Incidence Rate Ratios"),
-                    tableOutput("irr_table")
-                ),
-                tabPanel("Zero-Inflated Poisson Model",
-                    verbatimTextOutput("zip_model_formula"),
-                    h4("Incidence Rate Ratios"),
-                    tableOutput("zip_irr_table")
-                ),
-                tabPanel("Zero-Inflated Negative Binomial Model",
-                    verbatimTextOutput("zinb_model_formula"),
-                    h4("Incidence Rate Ratios"),
-                    tableOutput("zinb_irr_table")
                 )
             )
         )
@@ -142,6 +121,24 @@ server = function(input, output, session){
     })
 
     # Interaction coefficient 
+    output$interp_model_label = renderText({
+        paste("Model Formula —", selected_model_type())
+    })
+
+    output$dynamic_irr_table = renderTable({
+        req(selected_model_type())
+        model <- resolve_model(selected_model_type())
+        req(model)
+
+        switch(selected_model_type(),
+            "Poisson"                        = get_rate_ratio_table(model),
+            "Quasipoisson"                   = get_quasi_rate_ratio_table(model),
+            "Negative Binomial"              = get_incidence_rate_ratio_table(model),
+            "Zero-Inflated Poisson"          = get_zip_irr_table(model),
+            "Zero-Inflated Negative Binomial" = get_zinb_irr_table(model)
+        )
+    })
+
     output$interaction_ui = renderUI({
         req(input$predictors)
         preds <- input$predictors
@@ -350,7 +347,6 @@ server = function(input, output, session){
         })
     
         out <- tagList(
-            tags$h3(paste(interp$model_label, "— Interpretation")),
             tags$h4("Count Component"),
             tags$ul(count_items)
         )
