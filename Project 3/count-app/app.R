@@ -67,7 +67,32 @@ ui = fluidPage(
                     )
                 ),
                 tabPanel("Outliers",
-                    plotOutput("assumption_influence_plot", height = "700px")
+                    br(),
+                    sidebarLayout(
+                        sidebarPanel(
+                            tags$p("Make sure to evaluate whether there are outliers or influential points:"),
+                            br(),
+                            checkboxInput("assume_leverage",
+                                "Few/no observations with large leverage values.", value = FALSE),
+                            checkboxInput("assume_cooks",
+                                "Few/no observations with large Cook's distance values.", value = FALSE),
+                            checkboxInput("assume_dffits",
+                                "Few/no observations with DFFITS with large magnitude.", value = FALSE),
+                            checkboxInput("assume_residuals",
+                                 "Few/no observations with outlying residuals.", value = FALSE),
+                            br(),
+                            actionButton("check_influence", "Check Observations",
+                                class = "btn btn-secondary"),
+                            br(), br(),
+                            uiOutput("influence_verdict_ui")
+                        ),
+                        mainPanel(
+                            selectInput("outlier_model_type", "Select Model",
+                            choices = c("Poisson", "Quasipoisson", "Negative Binomial",
+                                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial")),
+                            plotOutput("assumption_influence_plot", height = "700px")
+                        )
+                    )
                 ),
                 tabPanel("Interpretation",
                     br(),
@@ -278,6 +303,31 @@ server = function(input, output, session){
         plotInfluence(poisson_model())
     }, height = 700)
 
+    influence_checked = eventReactive(input$check_influence, {
+        list(
+            leverage  = input$assume_leverage,
+            cooks     = input$assume_cooks,
+            dffits    = input$assume_dffits,
+            residuals = input$assume_residuals
+        )
+    })
+
+    output$influence_verdict_ui = renderUI({
+        req(influence_checked())
+        chk <- influence_checked()
+        all_checked <- all(unlist(chk))
+
+        if (all_checked) {
+            tags$p(style = "color:darkgreen; font-weight:bold;",
+            "   The model likely isn't affected by outliers or high-leverage points. ",
+            "   Please proceed to the next step.")
+    }    else {
+            tags$p(style = "color:red; font-weight:bold;",
+                "The model may be affected by outliers or influential points. ",
+                "Consider investigating flagged observations before interpreting results.")
+        }
+    })
+
     # Interpretation
     output$interpretation_ui = renderUI({
         req(input$interp_model_type)
@@ -344,11 +394,10 @@ server = function(input, output, session){
 
         make_item <- function(label, result, extra_ui = NULL) {
             icon_col <- if (result$flagged) "red" else "darkgreen"
-            icon     <- if (result$flagged) "\u274c" else "\u2705"
             tagList(
                 tags$div(
                     style = "margin-bottom:10px;",
-                    tags$span(icon, style = paste0("color:", icon_col, "; font-size:1.1em;")),
+                    tags$span(style = paste0("color:", icon_col, "; font-size:1.1em;")),
                     tags$strong(paste0(" ", label)),
                     tags$br(),
                     tags$span(result$message, style = paste0("color:", icon_col, ";")),
