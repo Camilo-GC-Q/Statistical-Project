@@ -29,7 +29,7 @@ interpret_count_model = function(model, response, predictors) {
     count_df <- params %>%
         filter(Component == "conditional") %>%
         transmute(
-            term      = Parameter,
+            term      = sub("^count_", "", Parameter),
             estimate  = Coefficient,
             std.error = SE,
             statistic = z,
@@ -39,7 +39,7 @@ interpret_count_model = function(model, response, predictors) {
     zero_df <- params %>%
         filter(Component == "zero_inflated") %>%
         transmute(
-            term      = Parameter,
+            term      = sub("^zero_", "", Parameter),
             estimate  = Coefficient,
             std.error = SE,
             statistic = z,
@@ -61,12 +61,13 @@ interpret_count_model = function(model, response, predictors) {
   
   # Format p-value
   fmt_p <- function(p) {
-    if (p < 0.001) "p<0.001" else paste0("p=", round(p, 4))
+    if (is.na(p)) "p=NA" else if (p<0.001) "p<0.001" else paste0("p=", round(p, 4))
   }
   
   # Significance phrase 
   sig_phrase <- function(p) {
-    if (p < 0.05) "This effect is statistically discernible."
+    if (is.na(p)) "Significance could not be determined."
+    else if (p < 0.05) "This effect is statistically discernible."
     else "This effect is not statistically discernible."
   }
 
