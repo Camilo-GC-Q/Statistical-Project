@@ -12,9 +12,6 @@ ui = fluidPage(
             uiOutput("predictor_ui"),
             uiOutput("interaction_ui"),
             uiOutput("offset_ui"),
-            selectInput("plot_model_type", "Select Model Type for Plotting",
-                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "Zero-Inflated Poisson",
-                "Zero-Inflated Negative Binomial")),
             hr(),
             selectInput("model_type", "Select Model to Fit",
                 choices = c("Poisson", "Quasipoisson", "Negative Binomial",
@@ -31,14 +28,9 @@ ui = fluidPage(
                     plotOutput("count_plot"),
                     hr(),
                     h4("Pairwise Plots"),
-                    selectInput("plot_model_type", "Select Model Type for Plotting",
-                                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")),
                     plotOutput("pair_plot", height = "800px"),
                     hr(),
                     h4("Correlation Matrix of Model Terms"),
-                    selectInput("cor_model_type", "Select Model",
-                                choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")
-                    ),
                     tableOutput("coeff_cor_table")
                 ),
                 tabPanel("Assumptions",
@@ -87,26 +79,18 @@ ui = fluidPage(
                             uiOutput("influence_verdict_ui")
                         ),
                         mainPanel(
-                            selectInput("outlier_model_type", "Select Model",
-                            choices = c("Poisson", "Quasipoisson", "Negative Binomial",
-                                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial")),
                             plotOutput("assumption_influence_plot", height = "700px")
                         )
                     )
                 ),
                 tabPanel("Interpretation",
                     br(),
-                    selectInput("interp_model_type", "Select Model to Interpret",
-                    choices = c("Poisson", "Quasipoisson", "Negative Binomial", "ZIP", "ZINB")
-                    ),
                     uiOutput("interpretation_ui")
                 ),
                 tabPanel("Interaction",
                     br(),    
                     sidebarLayout(
                         sidebarPanel(
-                            selectInput("jn_model_type", "Select Model",
-                                choices = c("Poisson", "Quasipoisson", "Negative Binomial")),
                             uiOutput("jn_interaction_ui"),
                             uiOutput("jn_moderator_ui")
                         ),
@@ -147,6 +131,9 @@ ui = fluidPage(
 )
 
 server = function(input, output, session){
+
+    #model selection
+    selected_model_type = reactive(input$model_type)
 
     # Data input
     data = reactive({
@@ -288,19 +275,19 @@ server = function(input, output, session){
 
     # Pairwise plots 
     output$pair_plot = renderPlot({
-        req(data(), input$response, input$predictors, input$plot_model_type)
+        req(data(), input$response, input$predictors, selected_model_type())
         plot_count_pairs(
             df         = data(),
             response   = input$response,
             predictors = input$predictors,
-            model_type = input$plot_model_type
+            model_type = selected_model_type()
         )
     })
 
     # Coefficient correlation matrix
     output$coeff_cor_table = renderTable({
-    req(input$cor_model_type)
-    model_to_display <- resolve_model(input$cor_model_type)
+    req(selected_model_type())
+    model_to_display <- resolve_model(selected_model_type())
     req(model_to_display)
     get_coeff_correlation_matrix(model_to_display)
     }, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
@@ -344,10 +331,10 @@ server = function(input, output, session){
 
     # Interpretation
     output$interpretation_ui = renderUI({
-        req(input$interp_model_type)
+        req(selected_model_type())
     
         model <- tryCatch(
-            resolve_model(input$interp_model_type),
+            resolve_model(selected_model_type()),
             error = function(e) NULL
         )
     
@@ -386,7 +373,7 @@ server = function(input, output, session){
         }
     
     # Quasi-Poisson note
-    if (input$interp_model_type == "Quasipoisson") {
+    if (selected_model_type() == "Quasipoisson") {
         out <- tagList(out, tags$hr(), tags$p(
             tags$strong("Note: "),
             "Quasi-Poisson adjusts standard errors for overdispersion but ",
@@ -502,8 +489,8 @@ server = function(input, output, session){
 
 
     output$jn_plot = renderPlot({
-        req(input$jn_interaction, input$jn_moderator, input$jn_model_type)
-        model = resolve_model(input$jn_model_type)
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
         req(model)
         vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
         pred = vars[vars != input$jn_moderator]
