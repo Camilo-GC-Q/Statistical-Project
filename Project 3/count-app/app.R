@@ -33,6 +33,10 @@ ui = fluidPage(
                     h4("Correlation Matrix of Model Terms"),
                     tableOutput("coeff_cor_table")
                 ),
+                tabPanel("Diagnostics",
+                    br(),
+                    plotOutput("rqr_plot", height = "800px")
+                ),
                 tabPanel("Assumptions",
                     sidebarLayout(
                         sidebarPanel(
@@ -162,6 +166,15 @@ server = function(input, output, session){
             )
         )
     })
+
+    # RQR plots
+    output$rqr_plot = renderPlot({
+        req(selected_model_type())
+        model = resolve_model(selected_model_type())
+        validate(need(!is.null(model),
+            paste("Please fit the", selected_model_type(), "model first.")))
+        plotRQR(model)
+    }, height = 800)
 
     # Offset application
     output$offset_ui = renderUI({
