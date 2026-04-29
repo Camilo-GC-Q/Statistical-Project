@@ -10,17 +10,22 @@ plot_johnson_neyman = function(model, pred, modx){
     }
 
     jn = tryCatch(
-    interactions::johnson_neyman(
-        model = model, pred = pred, modx = modx,
-        control.fdr = TRUE, plot = FALSE
-    ),
-    error = function(e) NULL
+        rlang::inject(
+            interactions::johnson_neyman(
+                model = model,
+                pred = !!rlang::sym(pred),
+                modx = !!rlang::sym(modx),
+                control.fdr = FALSE,
+                plot = FALSE
+            )
+        ),
+        error = function(e) NULL
     )
-    
-    if(is.null(jn)){
+
+     if(is.null(jn)){
         return(ggplot() +
             annotate("text", x = 0.5, y = 0.5,
-                label = "Johnson-Neyman could not be computed. \nEnsure the model is fit with the interaction term included.",
+                label = paste("Johnson-Neyman could not be computed.\nEnsure the model is fit with the interaction term included."),
                 size = 5, hjust = 0.5) +
             theme_bw())
     }
@@ -28,7 +33,7 @@ plot_johnson_neyman = function(model, pred, modx){
     jn$plot +
         xlab(modx) +
         ylab(paste("Slope of", pred)) +
-        ggtitle("Jonhson-Neyman Plot") +
+        ggtitle("Johnson-Neyman Plot") +
         scale_color_brewer(paste("Slope of", pred), palette = "Pastel1") +
         scale_fill_brewer(paste("Slope of", pred), palette = "Pastel1") +
         theme_bw()
