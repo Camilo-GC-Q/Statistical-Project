@@ -62,7 +62,9 @@ ui = fluidPage(
                             h4("VIF Table"),
                             tableOutput("vif_table_output"),
                             hr(),
-                            plotOutput("assumption_residual_plot", height = "700px")
+                            plotOutput("assumption_residual_plot", height = "700px"),
+                            hr(),
+                            plotOutput("assumption_influence_plot", height = "700px")
                         )
                     )
                 ),
@@ -270,6 +272,12 @@ server = function(input, output, session){
         plotResiduals(poisson_model())
     }, height = 700)
 
+    # Influence Plot
+    output$assumption_influence_plot = renderPlot({
+        req(poisson_model())
+        plotInfluence(poisson_model())
+    }, height = 700)
+    
     # Interpretation
     output$interpretation_ui = renderUI({
         req(input$interp_model_type)
