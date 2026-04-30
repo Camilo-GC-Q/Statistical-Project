@@ -1,6 +1,6 @@
 library(emmeans)
 library(magrittr)
-library(dplyr)
+library(tidyverse)
 
 
 # Estimated Marginal Means
@@ -92,10 +92,15 @@ get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
   int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
   
   build_contrast_table <- function(emm_obj) {
-    ct  <- data.frame(pairs(emm_obj))
-    cti <- data.frame(confint(pairs(emm_obj)))
-    ct$lower.CL <- cti$lower.CL
-    ct$upper.CL <- cti$upper.CL
+    p_obj = pairs(emm_obj)
+    ct  <- data.frame(p_obj)
+    cti <- data.frame(confint(p_obj))
+    lower_col = names(cti)[grep("low|LCL", names(cti), ignore.case = TRUE)][1]
+    upper_col = names(cti)[grep("upper|UCL", names(cti), ignore.case = TRUE)][1]
+    
+    if(!is.na(lower_col)) ct$lower.CL = cti[[lower_col]]
+    if(!is.na(upper_col)) ct$upper.CL = cti[[upper_col]]
+    
     ct$contrast <- gsub("\\.scaled", "", ct$contrast)
     ct %>%
       dplyr::select(-any_of("null")) %>%
