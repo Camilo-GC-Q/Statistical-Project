@@ -110,7 +110,13 @@ ui = fluidPage(
                             uiOutput("jn_moderator_ui")
                         ),
                         mainPanel(
-                            plotOutput("jn_plot", height = "500px")
+                            plotOutput("jn_plot", height = "500px"),
+                            hr(),
+                            h4("Estimated Marginal Means"),
+                            tableOutput("emmeans_table"),
+                            hr(),
+                            h4("Contrasts of Marginal Means"),
+                            tableOutput("emmeans_contrasts_table")
                         )
                     )  
                 )
@@ -555,6 +561,9 @@ output$rqr_checks_ui = renderUI({
         pred = vars[vars != input$jn_moderator]
         plot_johnson_neyman(model, pred, input$jn_moderator)
     }, height = 500)
+
+    # EMM Table Output
+    output$emmeans_table = renderTable({})
 
 }
 
