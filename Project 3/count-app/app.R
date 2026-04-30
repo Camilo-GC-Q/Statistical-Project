@@ -563,7 +563,25 @@ output$rqr_checks_ui = renderUI({
     }, height = 500)
 
     # EMM Table Output
-    output$emmeans_table = renderTable({})
+    output$emmeans_table = renderTable({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        int.var = vars[vars != input$jn_moderator]
+        moderator = input$jn_moderator
+        get_emmeans_table(model, int.var, moderator, data())
+    })
+
+    output$emmeans_contrasts_table = renderTable({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars      = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        int.var   = vars[vars != input$jn_moderator]
+        moderator = input$jn_moderator
+        get_emmeans_contrasts(model, int.var, moderator, data())
+    })
 
 }
 
