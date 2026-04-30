@@ -183,6 +183,48 @@ get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
 
 }
 
+# EMTrends
+
+get_emtrends_table = function(model, int.var, moderator, dat) {
+
+  int.vars.classes = sapply(dat[, c(int.var, moderator)], class)
+
+  if (all(int.vars.classes == "numeric")) {
+    m = mean(unlist(model$model[moderator]), na.rm = TRUE)
+    s = sd(unlist(model$model[moderator]), na.rm = TRUE)
+    modvarat = list(c(round(m - s, 2), round(m + s, 2)))
+    names(modvarat) = moderator
+
+    mod.emtrends = data.frame(emtrends(object = model, specs = moderator,
+                                       var = int.var,
+                                       at = modvarat))
+    mod.emtrends[[moderator]] = ifelse(
+      mod.emtrends[[moderator]] == round(m - s, 2),
+      "Low (Mean - 1SD)", "High (Mean + 1SD)"
+    )
+    emtrend.test = test(emtrends(object = model, specs = moderator,
+                                 var = int.var,
+                                 at = modvarat))
+  } else if (int.vars.classes[moderator] == "factor") {
+    mod.emtrends = data.frame(emtrends(model, specs = moderator, var = int.var))
+    emtend.test = test(emtrends(model, specs = moderator, var = int.var))
+
+  } else {
+    return(NULL)
+  }
+
+  colnames(mod.emtrends)[-1] = c(paste("Slope of", int.var), "SE", "df", "Lower CI", "Upper CI")
+  mod.emtrends = mod.emtrends |>
+      mutate("t ratio" = emtrend.test$t.ratio,
+             "p-value" = emtrend.test$p.value) |>
+      relocate(c("t ratio", "p-value"), .after = df) |>
+      mutate_if(is.numeric, round, 4)
+  
+  mod.emtrends
+}
+
+
+
 # Interpret EMM Contrasts
   interpret_emmeans_contrasts <- function(contrast_table, outcome, alpha = 0.05) {
  
@@ -232,3 +274,5 @@ get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
  
     bullets
 }
+
+
