@@ -12,6 +12,7 @@ ui = fluidPage(
             uiOutput("predictor_ui"),
             uiOutput("interaction_ui"),
             uiOutput("offset_ui"),
+            uiOutput("scale_ui"),
             hr(),
             selectInput("model_type", "Select Model to Fit",
                 choices = c("Poisson", "Quasipoisson", "Negative Binomial",
@@ -138,6 +139,17 @@ server = function(input, output, session){
         read_csv(input$file$datapath)
     })
 
+    # Scaled data
+    scaled_data = reactive({
+        req(data())
+        df = data()
+        vars = input$scale_vars
+        if (!is.null(vars) && length(vars) > 0) {
+            df[vars] = lapply(df[vars], scale)
+        }
+        df
+    })
+
     # Interaction coefficient 
     output$interp_model_label = renderText({
         paste("Model Formula —", selected_model_type())
@@ -242,6 +254,19 @@ server = function(input, output, session){
         selectInput("offset_var", "Select Offset Variable", choices = c("None", numerics))
     })
 
+    # Scale application
+    output$scale_ui = renderUI({
+        req(data(), input$predictors)
+        numerics = input$predictors[sapply(data()[, input$predictors, drop = FALSE], is.numeric)]
+        if (length(numerics) == 0) return(NULL)
+        pickerInput("scale_vars", "Scale Variable(s)",
+            choices = numerics,
+            options = list('actions-box' = TRUE,
+                           'none-selected-text' = "No scaling"),
+            multiple = TRUE
+        )
+    })
+
     # Formula builder
     build_formula = reactive({
         req(input$response, input$predictors)
@@ -286,11 +311,11 @@ server = function(input, output, session){
         fml <- build_formula()
 
         fitted_models[[input$model_type]] <- switch(input$model_type,
-            "Poisson"           = fit_poisson_model(data(), input$response, input$predictors, formula_str = fml),
-            "Quasipoisson"      = fit_quasi_poisson_model(data(), input$response, input$predictors, formula_str = fml),
-            "Negative Binomial" = fit_negative_binomial_model(data(), input$response, input$predictors, formula_str = fml),
-            "Zero-Inflated Poisson" = fit_zip_model(data(), input$response, input$predictors, formula_str = fml),
-            "Zero-Inflated Negative Binomial"  = fit_zinb_model(data(), input$response, input$predictors, formula_str = fml)
+            "Poisson"           = fit_poisson_model(scaled_data(), input$response, input$predictors, formula_str = fml),
+            "Quasipoisson"      = fit_quasi_poisson_model(scaled_data(), input$response, input$predictors, formula_str = fml),
+            "Negative Binomial" = fit_negative_binomial_model(scaled_data(), input$response, input$predictors, formula_str = fml),
+            "Zero-Inflated Poisson" = fit_zip_model(scaled_data(), input$response, input$predictors, formula_str = fml),
+            "Zero-Inflated Negative Binomial"  = fit_zinb_model(scaled_data(), input$response, input$predictors, formula_str = fml)
         )
     })
 
