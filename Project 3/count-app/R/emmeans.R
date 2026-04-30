@@ -78,9 +78,9 @@ get_emmeans_table <- function(model, int.var, moderator, dat) {
     )
   }
   
-  mod.emmeans %>%
-    set_rownames(NULL) %>%
-    set_colnames(c(moderator, int.var, "Estimated Marginal Mean", "SE", "df", "Lower CI", "Upper CI")) %>%
+  mod.emmeans |>
+    set_rownames(NULL) |>
+    set_colnames(c(moderator, int.var, "Estimated Marginal Mean", "SE", "df", "Lower CI", "Upper CI")) |>
     mutate_if(is.numeric, round, 4)
 }
 
@@ -125,9 +125,9 @@ get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
     if(!is.na(upper_col)) ct$upper.CL = cti[[upper_col]]
     
     ct$contrast <- gsub("\\.scaled", "", ct$contrast)
-    ct %>%
-      dplyr::select(-any_of("null")) %>%
-      set_rownames(NULL) %>%
+    ct |>
+      dplyr::select(-any_of("null")) |>
+      set_rownames(NULL) |>
       set_colnames(c("Contrast", "Estimate", "SE", "df", "t ratio", "p-value", "Lower CI", "Upper CI"))
   }
   
