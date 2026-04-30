@@ -114,6 +114,7 @@ ui = fluidPage(
                             hr(),
                             h4("Estimated Marginal Means"),
                             tableOutput("emmeans_table"),
+                            uiOutput("emmeans_interpretation_ui"),
                             hr(),
                             h4("Contrasts of Marginal Means"),
                             tableOutput("emmeans_contrasts_table")
@@ -189,48 +190,48 @@ server = function(input, output, session){
     }, height = 800)
 
     rqr_results = reactive({
-    req(selected_model_type())
-    model = resolve_model(selected_model_type())
-    validate(need(!is.null(model),
-        paste("Please fit the", selected_model_type(), "model first.")))
-    plotRQR(model)
-})
+        req(selected_model_type())
+        model = resolve_model(selected_model_type())
+        validate(need(!is.null(model),
+            paste("Please fit the", selected_model_type(), "model first.")))
+        plotRQR(model)
+    })
 
-output$rqr_plot = renderPlot({
-    rqr_results()$plot
-}, height = 700)
+    output$rqr_plot = renderPlot({
+        rqr_results()$plot
+    }, height = 700)
 
-output$rqr_checks_ui = renderUI({
-    req(rqr_results())
-    checks = rqr_results()$checks
+    output$rqr_checks_ui = renderUI({
+        req(rqr_results())
+        checks = rqr_results()$checks
 
-    make_item = function(label, result) {
-        color = if (result$flagged) "red" else "darkgreen"
+        make_item = function(label, result) {
+            color = if (result$flagged) "red" else "darkgreen"
+            tagList(
+                tags$div(
+                    style = "margin-bottom:10px;",
+                    tags$strong(label),
+                    tags$br(),
+                    tags$span(result$message, style = paste0("color:", color, ";"))
+                ),
+                tags$hr(style = "margin:6px 0;")
+            )
+        }
+
+        rec_color = if (grepl("appears adequately|most flexible", checks$recommendation))
+            "darkgreen" else "darkorange"
+
         tagList(
-            tags$div(
-                style = "margin-bottom:10px;",
-                tags$strong(label),
-                tags$br(),
-                tags$span(result$message, style = paste0("color:", color, ";"))
-            ),
-            tags$hr(style = "margin:6px 0;")
+            make_item("Normality of RQRs",      checks$findings$normality),
+            make_item("Dispersion",             checks$findings$dispersion),
+            make_item("Excess Zeros",           checks$findings$zeros),
+            make_item("Mean-Variance Relation", checks$findings$mean_variance),
+            tags$hr(),
+            tags$h4("Model Recommendation"),
+            tags$p(style = paste0("color:", rec_color, "; font-weight:bold;"),
+                checks$recommendation)
         )
-    }
-
-    rec_color = if (grepl("appears adequately|most flexible", checks$recommendation))
-        "darkgreen" else "darkorange"
-
-    tagList(
-        make_item("Normality of RQRs",      checks$findings$normality),
-        make_item("Dispersion",             checks$findings$dispersion),
-        make_item("Excess Zeros",           checks$findings$zeros),
-        make_item("Mean-Variance Relation", checks$findings$mean_variance),
-        tags$hr(),
-        tags$h4("Model Recommendation"),
-        tags$p(style = paste0("color:", rec_color, "; font-weight:bold;"),
-            checks$recommendation)
-    )
-})
+    })
 
     # Offset application
     output$offset_ui = renderUI({
@@ -581,6 +582,27 @@ output$rqr_checks_ui = renderUI({
         int.var   = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
         get_emmeans_contrasts(model, int.var, moderator, data())
+    })
+
+    # Emm interpretation
+    output$emmeans_interpretation_ui = renderUI({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars      = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        int.var   = vars[vars != input$jn_moderator]
+        moderator = input$jn_moderator
+
+        tbl = get_emmeans_table(model, int.var, moderator, data())
+
+        # Derive outcome name from model
+        outcome = as.character(formula(model)[[2]])
+
+        bullets = interpret_emmeans(tbl, outcome, int.var, moderator)
+
+        tags$ul(
+            purrr::map(bullets, ~ tags$li(.x, style = "margin-bottom: 6px;"))
+        )
     })
 
 }

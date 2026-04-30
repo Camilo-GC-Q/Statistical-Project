@@ -84,6 +84,30 @@ get_emmeans_table <- function(model, int.var, moderator, dat) {
     mutate_if(is.numeric, round, 4)
 }
 
+# Interpretation of EMM
+interpret_emmeans <- function(emm_table, outcome, int.var, moderator) {
+  
+  bullets <- mapply(
+    FUN = function(mod_level, var_level, emm, lower, upper) {
+      sprintf(
+        "The estimated marginal mean of %s for %s = %s and %s = %s is %.2f (95%% CI: %.2f, %.2f).",
+        outcome,
+        moderator, mod_level,
+        int.var,   var_level,
+        emm, lower, upper
+      )
+    },
+    mod_level = emm_table[[moderator]],
+    var_level = emm_table[[int.var]],
+    emm       = emm_table[["Estimated Marginal Mean"]],
+    lower     = emm_table[["Lower CI"]],
+    upper     = emm_table[["Upper CI"]],
+    SIMPLIFY  = TRUE
+  )
+  
+  bullets
+}
+
 
 # Contrasts of Marginal Means
 
