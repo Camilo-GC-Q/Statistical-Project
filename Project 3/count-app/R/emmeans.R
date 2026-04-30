@@ -207,13 +207,21 @@ get_emtrends_table = function(model, int.var, moderator, dat) {
                                  at = modvarat))
   } else if (int.vars.classes[moderator] == "factor") {
     mod.emtrends = data.frame(emtrends(model, specs = moderator, var = int.var))
-    emtend.test = test(emtrends(model, specs = moderator, var = int.var))
+    emtrend.test = test(emtrends(model, specs = moderator, var = int.var))
 
   } else {
     return(NULL)
   }
 
-  colnames(mod.emtrends)[-1] = c(paste("Slope of", int.var), "SE", "df", "Lower CI", "Upper CI")
+  trend_col = grep("\\.trend$", names(mod.emtrends), value = TRUE)[1]
+  ci_low    = grep("lower|LCL", names(mod.emtrends), ignore.case = TRUE, value = TRUE)[1]
+  ci_high   = grep("upper|UCL", names(mod.emtrends), ignore.case = TRUE, value = TRUE)[1]
+
+  names(mod.emtrends)[names(mod.emtrends) == trend_col] <- paste("Slope of", int.var)
+  if (!is.na(ci_low))  names(mod.emtrends)[names(mod.emtrends) == ci_low]  <- "Lower CI"
+  if (!is.na(ci_high)) names(mod.emtrends)[names(mod.emtrends) == ci_high] <- "Upper CI"
+
+  mod.emtrends = dplyr::select(mod.emtrends, -any_of("null"))  
   mod.emtrends = mod.emtrends |>
       mutate("t ratio" = emtrend.test$t.ratio,
              "p-value" = emtrend.test$p.value) |>
@@ -221,6 +229,47 @@ get_emtrends_table = function(model, int.var, moderator, dat) {
       mutate_if(is.numeric, round, 4)
   
   mod.emtrends
+}
+
+get_emtrends_contrasts <- function(model, int.var, moderator, dat) {
+
+    int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
+
+    build_emtrend_contrast <- function(emt_obj) {
+        ct  <- data.frame(pairs(emt_obj))
+        cti <- data.frame(confint(pairs(emt_obj)))
+        lower_col <- names(cti)[grep("low|LCL", names(cti), ignore.case = TRUE)][1]
+        upper_col <- names(cti)[grep("upper|UCL", names(cti), ignore.case = TRUE)][1]
+        if (!is.na(lower_col)) ct$lower.CL <- cti[[lower_col]]
+        if (!is.na(upper_col)) ct$upper.CL <- cti[[upper_col]]
+        ct$contrast <- gsub("\\.scaled", "", ct$contrast)
+        ct %>%
+            dplyr::select(-any_of("null")) %>%
+            set_rownames(NULL) %>%
+            set_colnames(c("Contrast", "Estimate", "SE", "df", "t ratio", "p-value", "Lower CI", "Upper CI"))
+    }
+
+    if (all(int.vars.classes == "numeric")) {
+        m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
+        s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
+        m.var <- mean(unlist(model$model[int.var]),   na.rm = TRUE)
+        s.var <- sd(unlist(model$model[int.var]),     na.rm = TRUE)
+        modvarat <- list(c(round(m.mod - s.mod, 2), round(m.mod + s.mod, 2)),
+                         c(round(m.var - s.var, 2), round(m.var + s.var, 2)))
+        names(modvarat) <- c(moderator, int.var)
+
+        emt <- emtrends(object = model, specs = moderator, var = int.var, at = modvarat)
+        emt <- add_grouping(emt, "moderator", moderator,
+                            c(paste0("(Low ", moderator, ")"), paste0("(High ", moderator, ")")))
+        build_emtrend_contrast(emmeans(emt, spec = "moderator"))
+
+    } else if (int.vars.classes[moderator] == "factor") {
+        emt <- emtrends(model, specs = moderator, var = int.var)
+        build_emtrend_contrast(emt)
+
+    } else {
+        return(NULL)
+    }
 }
 
 
