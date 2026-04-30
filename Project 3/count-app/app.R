@@ -119,7 +119,13 @@ ui = fluidPage(
                             hr(),
                             h4("Contrasts of Marginal Means"),
                             tableOutput("emmeans_contrasts_table"),
-                            uiOutput("emmeans_contrasts_interpretation_ui")
+                            uiOutput("emmeans_contrasts_interpretation_ui"),
+                            hr(),
+                            h4("Marginal Effects (emtrends)"),
+                            tableOutput("emtrends_table"),
+                            hr(),
+                            h4("Contrasts of Marginal Effects"),
+                            tableOutput("emtrends_contrasts_table")
                         )
                     )  
                 )
@@ -171,7 +177,7 @@ server = function(input, output, session){
 
     output$interaction_ui = renderUI({
         req(input$predictors)
-        preds <- input$predictors
+        preds <- input$predictors[!grepl(":", input$predictors)]
         if (length(preds) < 2) return(NULL)
 
         # Build all unique pairs
@@ -257,7 +263,8 @@ server = function(input, output, session){
     # Scale application
     output$scale_ui = renderUI({
         req(data(), input$predictors)
-        numerics = input$predictors[sapply(data()[, input$predictors, drop = FALSE], is.numeric)]
+        pure_preds = input$predictors[!grepl(":", input$predictors)]
+        numerics = pure_preds[sapply(data()[, pure_preds, drop = FALSE], is.numeric)]
         if (length(numerics) == 0) return(NULL)
         pickerInput("scale_vars", "Scale Variable(s)",
             choices = numerics,
@@ -273,7 +280,11 @@ server = function(input, output, session){
         preds  <- input$predictors
         ixn    <- input$interactions 
 
-        rhs_terms <- preds
+        is_ixn     <- grepl(":", preds)
+        pure_preds <- preds[!is_ixn]
+        pred_ixns  <- preds[is_ixn]
+
+        rhs_terms <- pure_preds
         if (length(ixn) > 0) {
             ixn_terms <- vapply(ixn, \(k) {
                 parts <- strsplit(k, "\\|\\|\\|")[[1]]
@@ -281,6 +292,8 @@ server = function(input, output, session){
             }, character(1))
             rhs_terms <- c(rhs_terms, ixn_terms)
         }
+        rhs_terms <- c(rhs_terms, pred_ixns)
+        
         formula_str = paste(input$response, "~", paste(rhs_terms, collapse = " + "))
 
         if(!is.null(input$offset_var) && input$offset_var != "None"){
@@ -556,8 +569,18 @@ server = function(input, output, session){
         all_vars     <- setdiff(names(data()), input$response)
         numerics     <- all_vars[sapply(data()[, all_vars, drop = FALSE], is.numeric)]
         categoricals <- all_vars[sapply(data()[, all_vars, drop = FALSE], function(x) !is.numeric(x))]
+
+        interaction_choices <- character(0)
+        if (length(c(numerics, categoricals)) >= 2) {
+            pairs_list <- combn(c(numerics, categoricals), 2, simplify = FALSE)
+            interaction_choices <- setNames(
+                vapply(pairs_list, \(p) paste(p, collapse = ":"), character(1)),
+                vapply(pairs_list, \(p) paste(p, collapse = " \u00d7 "), character(1))
+            )
+        }
+
         pickerInput("predictors", "Select Predictor Variable(s)",
-            choices  = list("Numeric" = numerics, "Categorical" = categoricals),
+            choices  = list("Numeric" = numerics, "Categorical" = categoricals, "Interactions" = interaction_choices),
             options  = list(`actions-box` = TRUE),
             multiple = TRUE)
     })
@@ -608,6 +631,26 @@ server = function(input, output, session){
         int.var   = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
         get_emmeans_contrasts(model, int.var, moderator, data())
+    })
+
+    output$emtrends_table = renderTable({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        int.var = vars[vars != input$jn_moderator]
+        moderator = input$jn_moderator
+        get_emtrends_table(model, int.var, moderator, data())
+    })
+
+    output$emtrends_contrasts_table = renderTable({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        int.var = vars[vars != input$jn_moderator]
+        moderator = input$jn_moderator
+        get_emtrends_contrasts(model, int.var, moderator, data())
     })
 
     # Emm interpretation
