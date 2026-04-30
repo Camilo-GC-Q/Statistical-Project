@@ -110,7 +110,6 @@ interpret_emmeans <- function(emm_table, outcome, int.var, moderator) {
 
 
 # Contrasts of Marginal Means
-
 get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
   
   int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
@@ -181,4 +180,55 @@ get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
                         c(paste0("(Low ", moderator, ")"), paste0("(High ", moderator, ")")))
     build_contrast_table(emm)
   }
+
+}
+
+# Interpret EMM Contrasts
+  interpret_emmeans_contrasts <- function(contrast_table, outcome, alpha = 0.05) {
+ 
+    format_p <- function(p) {
+      if (is.na(p))     return("NA")
+      if (p < 0.0001)   return("< 0.0001")
+      if (p < 0.001)    return(paste0("= ", formatC(p, format = "f", digits = 4)))
+      return(paste0("= ", formatC(p, format = "f", digits = 4)))
+    }
+ 
+    bullets <- mapply(
+      FUN = function(contrast, estimate, se, df, t_ratio, p_value, lower, upper) {
+ 
+        # Determine significance — handle "<0.0001" strings as well as numeric
+        p_num <- suppressWarnings(as.numeric(as.character(p_value)))
+        sig_label <- if (!is.na(p_num) && p_num < alpha) "significant" else "not significant"
+ 
+        # Format p for display
+        p_display <- if (!is.na(p_num)) {
+          if (p_num < 0.0001) "< 0.0001" else formatC(p_num, format = "f", digits = 4)
+        } else {
+          as.character(p_value)   # already a string like "<0.0001"
+        }
+ 
+        sprintf(
+          "The contrast of estimated marginal means of %s for (%s) is %s (t = %.2f, df = %g, p-value %s; 95%% CI: %.2f, %.2f).",
+          outcome,
+          contrast,
+          sig_label,
+          t_ratio,
+          df,
+          p_display,
+          lower,
+          upper
+        )
+      },
+      contrast = contrast_table[["Contrast"]],
+      estimate = contrast_table[["Estimate"]],
+      se       = contrast_table[["SE"]],
+      df       = contrast_table[["df"]],
+      t_ratio  = contrast_table[["t ratio"]],
+      p_value  = contrast_table[["p-value"]],
+      lower    = contrast_table[["Lower CI"]],
+      upper    = contrast_table[["Upper CI"]],
+      SIMPLIFY = TRUE
+    )
+ 
+    bullets
 }

@@ -117,7 +117,8 @@ ui = fluidPage(
                             uiOutput("emmeans_interpretation_ui"),
                             hr(),
                             h4("Contrasts of Marginal Means"),
-                            tableOutput("emmeans_contrasts_table")
+                            tableOutput("emmeans_contrasts_table"),
+                            uiOutput("emmeans_contrasts_interpretation_ui")
                         )
                     )  
                 )
@@ -604,6 +605,25 @@ server = function(input, output, session){
             purrr::map(bullets, ~ tags$li(.x, style = "margin-bottom: 6px;"))
         )
     })
+
+    #EMM Contrast Interpretation
+    output$emmeans_contrasts_interpretation_ui = renderUI({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars      = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        int.var   = vars[vars != input$jn_moderator]
+        moderator = input$jn_moderator
+
+        ct      = get_emmeans_contrasts(model, int.var, moderator, data())
+        outcome = as.character(formula(model)[[2]])
+        bullets = interpret_emmeans_contrasts(ct, outcome)
+
+        tags$ul(
+            purrr::map(bullets, ~ tags$li(.x, style = "margin-bottom: 6px;"))
+        )
+    })
+
 
 }
 
