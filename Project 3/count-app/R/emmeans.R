@@ -2,7 +2,6 @@ library(emmeans)
 library(magrittr)
 library(tidyverse)
 
-
 # Estimated Marginal Means
 
 get_emmeans_table <- function(model, int.var, moderator, dat) {
@@ -220,10 +219,12 @@ get_emtrends_table = function(model, int.var, moderator, dat) {
   names(mod.emtrends)[names(mod.emtrends) == trend_col] <- paste("Slope of", int.var)
   if (!is.na(ci_low))  names(mod.emtrends)[names(mod.emtrends) == ci_low]  <- "Lower CI"
   if (!is.na(ci_high)) names(mod.emtrends)[names(mod.emtrends) == ci_high] <- "Upper CI"
+  dplyr::select(mod.emtrends, -any_of("null"))
 
-  mod.emtrends = dplyr::select(mod.emtrends, -any_of("null"))  
+  ratio_col = grep("t\\.ratio|z\\.ratio", names(emtrend.test), value = TRUE)[1]
+
   mod.emtrends = mod.emtrends |>
-      mutate("t ratio" = emtrend.test$t.ratio,
+      mutate("t ratio" = emtrend.test[[ratio_col]],
              "p-value" = emtrend.test$p.value) |>
       relocate(c("t ratio", "p-value"), .after = df) |>
       mutate_if(is.numeric, round, 4)

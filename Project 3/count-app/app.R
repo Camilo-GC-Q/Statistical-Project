@@ -1,6 +1,7 @@
 library(shiny)
 library(tidyverse)
 library(shinyWidgets)
+library(ggeffects)
 list.files("R", full.names = TRUE) |> purrr::walk(source)
 
 ui = fluidPage(
@@ -10,7 +11,6 @@ ui = fluidPage(
             fileInput("file", "Upload CSV File", accept = ".csv"),
             uiOutput("response_ui"),
             uiOutput("predictor_ui"),
-            uiOutput("interaction_ui"),
             uiOutput("offset_ui"),
             uiOutput("scale_ui"),
             hr(),
@@ -111,7 +111,8 @@ ui = fluidPage(
                             uiOutput("jn_moderator_ui")
                         ),
                         mainPanel(
-                            plotOutput("jn_plot", height = "500px"),
+                            h4("Simple Slopes Visualization"),
+                            plotOutput("simple_slopes_plot", height = "400px"),
                             hr(),
                             h4("Estimated Marginal Means"),
                             tableOutput("emmeans_table"),
@@ -125,7 +126,10 @@ ui = fluidPage(
                             tableOutput("emtrends_table"),
                             hr(),
                             h4("Contrasts of Marginal Effects"),
-                            tableOutput("emtrends_contrasts_table")
+                            tableOutput("emtrends_contrasts_table"),
+                            hr(),
+                            h4("Johnson-Neyman Plot"),
+                            plotOutput("jn_plot", height = "500px")
                         )
                     )  
                 )
@@ -172,30 +176,6 @@ server = function(input, output, session){
             "Negative Binomial"              = get_incidence_rate_ratio_table(model),
             "Zero-Inflated Poisson"          = get_zip_irr_table(model),
             "Zero-Inflated Negative Binomial" = get_zinb_irr_table(model)
-        )
-    })
-
-    output$interaction_ui = renderUI({
-        req(input$predictors)
-        preds <- input$predictors[!grepl(":", input$predictors)]
-        if (length(preds) < 2) return(NULL)
-
-        # Build all unique pairs
-        pairs <- combn(preds, 2, simplify = FALSE)
-        pair_keys    <- vapply(pairs, \(p) paste(p, collapse = "|||"), character(1))
-        pair_labels  <- vapply(pairs, \(p) paste(p, collapse = " \u00d7 "), character(1))
-        names(pair_keys) <- pair_labels
-
-        tagList(
-            pickerInput(
-                "interactions",
-                "Select Interaction Terms",
-                choices  = pair_keys,
-                choicesOpt = list(content = pair_labels),
-                options  = list(`actions-box` = TRUE,
-                                `none-selected-text` = "No interactions"),
-                multiple = TRUE
-            )
         )
     })
 
@@ -277,23 +257,12 @@ server = function(input, output, session){
     # Formula builder
     build_formula = reactive({
         req(input$response, input$predictors)
-        preds  <- input$predictors
-        ixn    <- input$interactions 
+        preds      <- input$predictors
+        pure_preds <- preds[!grepl(":", preds)]
+        pred_ixns  <- preds[grepl(":", preds)]
 
-        is_ixn     <- grepl(":", preds)
-        pure_preds <- preds[!is_ixn]
-        pred_ixns  <- preds[is_ixn]
+        rhs_terms <- c(pure_preds, pred_ixns)
 
-        rhs_terms <- pure_preds
-        if (length(ixn) > 0) {
-            ixn_terms <- vapply(ixn, \(k) {
-                parts <- strsplit(k, "\\|\\|\\|")[[1]]
-                paste(parts, collapse = ":")
-            }, character(1))
-            rhs_terms <- c(rhs_terms, ixn_terms)
-        }
-        rhs_terms <- c(rhs_terms, pred_ixns)
-        
         formula_str = paste(input$response, "~", paste(rhs_terms, collapse = " + "))
 
         if(!is.null(input$offset_var) && input$offset_var != "None"){
@@ -587,27 +556,64 @@ server = function(input, output, session){
 
     # Jonhson-Neyman Plot
     output$jn_interaction_ui = renderUI({
-        req(input$interactions)
-        ixn_keys = input$interactions
-        ixn_labels = vapply(ixn_keys, function(k){
-            paste(strsplit(k, "\\|\\|\\|")[[1]], collapse = " \u00d7 ")
-        }, character(1))
-        names(ixn_keys) = ixn_labels
-        selectInput("jn_interaction", "Select Interaction", choices = ixn_keys)
-    })
+        req(input$predictors)
+        ixn_terms = input$predictors[grepl(":", input$predictors)]
+        req(length(ixn_terms) > 0)
+        selectInput("jn_interaction", "Select Interaction", choices = ixn_terms)
+})
 
     output$jn_moderator_ui = renderUI({
         req(input$jn_interaction)
-        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars = strsplit(input$jn_interaction, ":")[[1]]
         selectInput("jn_moderator", "Select Moderator Variable", choices = vars)
     })
 
+    # Slopes plot
+    output$simple_slopes_plot = renderPlot({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model    <- resolve_model(selected_model_type())
+        req(model)
+        vars      <- strsplit(input$jn_interaction, ":")[[1]]
+        int.var   <- vars[vars != input$jn_moderator]
+        moderator <- input$jn_moderator
+        dat       <- scaled_data()
+
+        int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
+
+        if (all(int.vars.classes == "numeric")) {
+            m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
+            s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
+            terms_spec <- c(int.var, paste0(moderator, " [", round(m.mod - s.mod, 2), ",", round(m.mod + s.mod, 2), "]"))
+            pred <- data.frame(ggemmeans(model, terms = terms_spec))
+            pred <- pred |> mutate(group = case_when(
+                group == round(m.mod - s.mod, 2) ~ paste0("Low (Mean - 1SD = ", round(m.mod - s.mod, 2), ")"),
+                TRUE                             ~ paste0("High (Mean + 1SD = ", round(m.mod + s.mod, 2), ")")
+            ))
+            ggplot(pred, aes(x = x, y = predicted, color = group, fill = group)) +
+                geom_line() +
+                geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, linetype = "dotted") +
+                labs(x = int.var, y = paste("Predicted", input$response), color = moderator, fill = moderator) +
+                scale_color_brewer(palette = "Set1") +
+                scale_fill_brewer(palette = "Set1") +
+                theme_bw()
+        } else {
+            pred <- data.frame(ggemmeans(model, terms = c(int.var, moderator)))
+            ggplot(pred, aes(x = x, y = predicted, color = group, fill = group)) +
+                geom_point(position = position_dodge(0.25)) +
+                geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                              position = position_dodge(0.25), width = 0.1) +
+                labs(x = int.var, y = paste("Predicted", input$response), color = moderator, fill = moderator) +
+                scale_color_brewer(palette = "Set1") +
+                scale_fill_brewer(palette = "Set1") +
+                theme_bw()
+        }
+    }, height = 400)
 
     output$jn_plot = renderPlot({
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
         model = resolve_model(selected_model_type())
         req(model)
-        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars = strsplit(input$jn_interaction, ":")[[1]]
         pred = vars[vars != input$jn_moderator]
         plot_johnson_neyman(model, pred, input$jn_moderator)
     }, height = 500)
@@ -617,7 +623,7 @@ server = function(input, output, session){
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
         model = resolve_model(selected_model_type())
         req(model)
-        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars = strsplit(input$jn_interaction, ":")[[1]]
         int.var = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
         get_emmeans_table(model, int.var, moderator, data())
@@ -627,7 +633,7 @@ server = function(input, output, session){
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
         model = resolve_model(selected_model_type())
         req(model)
-        vars      = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars      = strsplit(input$jn_interaction, ":")[[1]]
         int.var   = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
         get_emmeans_contrasts(model, int.var, moderator, data())
@@ -637,7 +643,7 @@ server = function(input, output, session){
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
         model = resolve_model(selected_model_type())
         req(model)
-        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars = strsplit(input$jn_interaction, ":")[[1]]
         int.var = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
         get_emtrends_table(model, int.var, moderator, data())
@@ -647,7 +653,7 @@ server = function(input, output, session){
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
         model = resolve_model(selected_model_type())
         req(model)
-        vars = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars = strsplit(input$jn_interaction, ":")[[1]]
         int.var = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
         get_emtrends_contrasts(model, int.var, moderator, data())
@@ -658,7 +664,7 @@ server = function(input, output, session){
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
         model = resolve_model(selected_model_type())
         req(model)
-        vars      = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars      = strsplit(input$jn_interaction, ":")[[1]]
         int.var   = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
 
@@ -679,7 +685,7 @@ server = function(input, output, session){
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
         model = resolve_model(selected_model_type())
         req(model)
-        vars      = strsplit(input$jn_interaction, "\\|\\|\\|")[[1]]
+        vars      = strsplit(input$jn_interaction, ":")[[1]]
         int.var   = vars[vars != input$jn_moderator]
         moderator = input$jn_moderator
 
