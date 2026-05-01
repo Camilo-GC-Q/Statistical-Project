@@ -232,13 +232,23 @@ server = function(input, output, session){
     # Scale application
     output$scale_ui = renderUI({
         req(data(), input$predictors)
+    
         pure_preds = input$predictors[!grepl(":", input$predictors)]
-        numerics = pure_preds[sapply(data()[, pure_preds, drop = FALSE], is.numeric)]
+    
+        # Nothing to scale if no pure predictors selected
+        if (length(pure_preds) == 0) return(NULL)
+    
+    # Guard against subscript errors from empty/bad column names
+        valid_preds = pure_preds[pure_preds %in% names(data())]
+        if (length(valid_preds) == 0) return(NULL)
+    
+        numerics = valid_preds[sapply(data()[, valid_preds, drop = FALSE], is.numeric)]
         if (length(numerics) == 0) return(NULL)
+    
         pickerInput("scale_vars", "Scale Variable(s)",
             choices = numerics,
             options = list('actions-box' = TRUE,
-                           'none-selected-text' = "No scaling"),
+                        'none-selected-text' = "No scaling"),
             multiple = TRUE
         )
     })
@@ -635,13 +645,25 @@ server = function(input, output, session){
     }, height = 400)
 
     output$jn_plot = renderPlot({
-        req(input$jn_interaction, input$jn_moderator, selected_model_type())
-        model = resolve_model(selected_model_type())
-        req(model)
-        vars = strsplit(input$jn_interaction, ":")[[1]]
-        pred = vars[vars != input$jn_moderator]
-        plot_johnson_neyman(model, pred, input$jn_moderator)
-    }, height = 500)
+    req(input$jn_interaction, input$jn_moderator, selected_model_type())
+    model = resolve_model(selected_model_type())
+    req(model)
+
+    vars = strsplit(input$jn_interaction, ":")[[1]]
+    pred = vars[vars != input$jn_moderator][1]
+    moderator = input$jn_moderator
+
+    tryCatch({
+        plot_johnson_neyman(model, pred, moderator)
+    }, error = function(e) {
+        print(e)  # shows in console
+        ggplot() +
+            annotate("text", x = 0.5, y = 0.5,
+                     label = paste("Error:", e$message),
+                     size = 5) +
+            theme_void()
+    })
+})
 
     # EMM Table Output
     output$emmeans_table = renderTable({
