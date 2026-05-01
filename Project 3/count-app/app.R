@@ -117,7 +117,8 @@ ui = fluidPage(
                             hr(),
                             h4("Johnson-Neyman Plot"),
                             downloadButton("dl_jn_plot", "Download", icon = icon("Download")),
-                            plotOutput("jn_plot", height = "500px")
+                            plotOutput("jn_plot", height = "500px"),
+                            uiOutput("jn_interpretation_ui")
                         )
                     )  
                 )
@@ -817,6 +818,81 @@ server = function(input, output, session){
         bullets = interpret_emtrends_contrasts(ct, int.var, moderator)
         tags$ul(purrr::map(bullets, ~ tags$li(.x, style = "margin-bottom: 6px;")))
     })
+
+    # JN Interpretations
+    output$jn_interpretation_ui = renderUI({
+    req(input$jn_interaction, input$jn_moderator, selected_model_type())
+    model <- resolve_model(selected_model_type())
+    req(model)
+
+    vars  <- strsplit(input$jn_interaction, ":")[[1]]
+    pred  <- vars[vars != input$jn_moderator]
+    modx  <- input$jn_moderator
+    dat   <- model$model
+
+    cf  <- coef(model)
+    vc  <- vcov(model)
+
+    beta_ixn <- paste0(pred, ":", modx)
+    if (!(beta_ixn %in% names(cf)))
+        beta_ixn <- paste0(modx, ":", pred)
+    req(beta_ixn %in% names(cf))
+
+    b1       <- if (pred %in% names(cf)) cf[pred] else 0
+    b3       <- cf[beta_ixn]
+    var_b1   <- if (pred %in% names(cf)) vc[pred, pred] else 0
+    var_b3   <- vc[beta_ixn, beta_ixn]
+    cov_b1b3 <- if (pred %in% names(cf)) vc[pred, beta_ixn] else 0
+
+    modx_vals <- seq(min(dat[[modx]], na.rm = TRUE),
+                        max(dat[[modx]], na.rm = TRUE),
+                        length.out = 1000)
+
+    slope    <- b1 + b3 * modx_vals
+    se_slope <- sqrt(var_b1 + modx_vals^2 * var_b3 + 2 * modx_vals * cov_b1b3)
+    z_crit   <- qnorm(0.975)
+    sig      <- abs(slope / se_slope) > z_crit
+
+    # Find JN threshold(s)
+    transitions <- which(diff(sig) != 0)
+    modx_range  <- round(range(dat[[modx]], na.rm = TRUE), 2)
+
+    if (length(transitions) == 0) {
+        if (all(sig)) {
+            jn_msg <- tags$li(paste0(
+                "The effect of ", pred, " on ", input$response,
+                " is statistically significant (p < .05) across the entire ",
+                "observed range of ", modx,
+                " [", modx_range[1], ", ", modx_range[2], "]."
+            ))
+        } else {
+            jn_msg <- tags$li(paste0(
+                "The effect of ", pred, " on ", input$response,
+                " is not statistically significant across the entire ",
+                "observed range of ", modx,
+                " [", modx_range[1], ", ", modx_range[2], "]."
+            ))
+        }
+    } else {
+        thresholds <- round(modx_vals[transitions + 1], 2)
+        jn_msg <- tags$li(paste0(
+            "When ", modx, " is OUTSIDE the interval [",
+            paste(thresholds, collapse = ", "), "], the effect of ",
+            pred, " is p < .05."
+        ))
+    }
+
+    note_msg <- paste0(
+        "The range of observed values of ", modx,
+        " is [", modx_range[1], ", ", modx_range[2], "]."
+    )
+
+    tagList(
+        tags$h4("Interpretation"),
+        tags$ul(jn_msg),
+        tags$p(tags$strong("Note: "), note_msg)
+    )
+})
 
 
 }
