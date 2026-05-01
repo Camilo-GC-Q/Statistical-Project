@@ -15,7 +15,7 @@ plot_count_pairs = function(df, response, predictors, model_type = "poisson"){
   my_theme <- theme_bw() + 
     theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5))
   
-  vars_needed <- c(response, predictors)
+  vars_needed <- c(response, predictors[!grepl(":", predictors)])
   plot_data   <- df |> dplyr::select(all_of(vars_needed)) |> drop_na()
   
   # Identify which columns are continuous vs discrete
