@@ -20,6 +20,7 @@ ui = fluidPage(
             actionButton("fit_model", "Fit Model", class = "btn btn-primary")
         ),
         mainPanel(
+            tabsetPanel(id = "main_tabs"),
             tabsetPanel(
                 tabPanel("Data Preview",
                     tableOutput("preview")
@@ -156,7 +157,7 @@ server = function(input, output, session){
 
     output$dynamic_irr_table = renderTable({
         req(selected_model_type())
-        model <- resolve_model(selected_model_type())
+        model = resolve_model(selected_model_type())
         req(model)
 
         switch(selected_model_type(),
@@ -169,6 +170,8 @@ server = function(input, output, session){
         )
     })
 
+    outputOptions(output, "dynamic_irr_table", suspendWhenHidden = FALSE)
+
     # RQR plots
     output$rqr_plot = renderPlot({
         req(selected_model_type())
@@ -178,7 +181,7 @@ server = function(input, output, session){
         plotRQR(model)
     }, height = 800)
 
-    output$dl_rqr_plot <- downloadHandler(
+    output$dl_rqr_plot = downloadHandler(
         filename = function() "rqr_plots.png",
         content  = function(file) ggsave(file, rqr_results()$plot, width = 10, height = 7, dpi = 300)
     )
@@ -263,11 +266,11 @@ server = function(input, output, session){
     # Formula builder
     build_formula = reactive({
         req(input$response, input$predictors)
-        preds      <- input$predictors
-        pure_preds <- preds[!grepl(":", preds)]
-        pred_ixns  <- preds[grepl(":", preds)]
+        preds      = input$predictors
+        pure_preds = preds[!grepl(":", preds)]
+        pred_ixns  = preds[grepl(":", preds)]
 
-        rhs_terms <- c(pure_preds, pred_ixns)
+        rhs_terms = c(pure_preds, pred_ixns)
 
         formula_str = paste(input$response, "~", paste(rhs_terms, collapse = " + "))
 
@@ -297,9 +300,9 @@ server = function(input, output, session){
 
     observeEvent(input$fit_model, {
         req(data(), input$response, input$predictors, input$model_type)
-        fml <- build_formula()
+        fml = build_formula()
 
-        fitted_models[[input$model_type]] <- switch(input$model_type,
+        fitted_models[[input$model_type]] = switch(input$model_type,
             "Poisson"           = fit_poisson_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Quasipoisson"      = fit_quasi_poisson_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Negative Binomial" = fit_negative_binomial_model(scaled_data(), input$response, input$predictors, formula_str = fml),
@@ -361,13 +364,13 @@ server = function(input, output, session){
 
 
     # Pairwise plots 
-    pair_plot_obj <- reactive({
+    pair_plot_obj = reactive({
         req(data(), input$response, input$predictors, selected_model_type())
         plot_count_pairs(df = data(), response = input$response,
                          predictors = input$predictors, model_type = selected_model_type())
     })
-    output$pair_plot <- renderPlot({ pair_plot_obj() })
-    output$dl_pair_plot <- downloadHandler(
+    output$pair_plot = renderPlot({ pair_plot_obj() })
+    output$dl_pair_plot = downloadHandler(
         filename = function() "pairwise_plots.png",
         content  = function(file) ggsave(file, pair_plot_obj(), width = 10, height = 10, dpi = 300)
     )
@@ -375,7 +378,7 @@ server = function(input, output, session){
     # Coefficient correlation matrix
     output$coeff_cor_table = renderTable({
     req(selected_model_type())
-    model_to_display <- resolve_model(selected_model_type())
+    model_to_display = resolve_model(selected_model_type())
     req(model_to_display)
     get_coeff_correlation_matrix(model_to_display)
     }, rownames = TRUE, striped = TRUE, hover = TRUE, bordered = TRUE)
@@ -387,12 +390,12 @@ server = function(input, output, session){
     }, height = 700)
 
     # Influence Plot
-    influence_plot_obj <- reactive({
+    influence_plot_obj = reactive({
         req(poisson_model())
         plotInfluence(poisson_model())
     })
     output$assumption_influence_plot = renderPlot({ influence_plot_obj() }, height = 700)
-    output$dl_influence_plot <- downloadHandler(
+    output$dl_influence_plot = downloadHandler(
         filename = function() "influence_plots.png",
         content  = function(file) ggsave(file, influence_plot_obj(), width = 10, height = 7, dpi = 300)
     )
@@ -400,10 +403,10 @@ server = function(input, output, session){
 
     output$zero_inflation_test_ui = renderUI({
         req(selected_model_type())
-        type <- selected_model_type()
+        type = selected_model_type()
         if (type %in% c("Zero-Inflated Poisson", "Zero-Inflated Negative Binomial",
                   "Tweedie")) return(NULL)
-        model <- resolve_model(type)
+        model = resolve_model(type)
         req(model)
         tagList(
             hr(),
@@ -415,9 +418,9 @@ server = function(input, output, session){
 
     output$zero_inflation_plot = renderPlot({
         req(selected_model_type())
-        type <- selected_model_type()
+        type = selected_model_type()
         req(!type %in% c("Zero-Inflated Poisson", "Zero-Inflated Negative Binomial"))
-        model <- resolve_model(type)
+        model = resolve_model(type)
         req(model)
         sim = DHARMa::simulateResiduals(model)
         DHARMa::testZeroInflation(sim)
@@ -426,8 +429,8 @@ server = function(input, output, session){
     output$dl_zero_inflation_plot = downloadHandler(
         filename = function() "zero_inflation_test.png",
         content  = function(file) {
-            model <- resolve_model(selected_model_type())
-            sim   <- DHARMa::simulateResiduals(model)
+            model = resolve_model(selected_model_type())
+            sim   = DHARMa::simulateResiduals(model)
             png(file, width = 800, height = 600)
             DHARMa::testZeroInflation(sim)
             dev.off()
@@ -446,8 +449,8 @@ server = function(input, output, session){
 
     output$influence_verdict_ui = renderUI({
         req(influence_checked())
-        chk <- influence_checked()
-        all_checked <- all(unlist(chk))
+        chk = influence_checked()
+        all_checked = all(unlist(chk))
 
         if (all_checked) {
             tags$p(style = "color:darkgreen; font-weight:bold;",
@@ -464,7 +467,7 @@ server = function(input, output, session){
     output$interpretation_ui = renderUI({
         req(selected_model_type())
     
-        model <- tryCatch(
+        model = tryCatch(
             resolve_model(selected_model_type()),
             error = function(e) NULL
         )
@@ -473,24 +476,24 @@ server = function(input, output, session){
             return(tags$p("Please fit this model first.", style = "color:grey;"))
         }
     
-        interp <- interpret_count_model(model, input$response, input$predictors)
+        interp = interpret_count_model(model, input$response, input$predictors)
     
         #Count component
-        count_items <- purrr::map(interp$count_sentences, function(s) {
+        count_items = purrr::map(interp$count_sentences, function(s) {
             tags$li(s, style = "margin-bottom: 8px;")
         })
     
-        out <- tagList(
+        out = tagList(
             tags$h4("Count Component"),
             tags$ul(count_items)
         )
     
         # Zero component
         if (interp$is_zeroinfl && !is.null(interp$zero_sentences)) {
-            zero_items <- purrr::map(interp$zero_sentences, function(s) {
+            zero_items = purrr::map(interp$zero_sentences, function(s) {
                 tags$li(s, style = "margin-bottom: 8px;")
             })
-            out <- tagList(
+            out = tagList(
                 out,
                 tags$hr(),
                 tags$h4("Zero-Inflation Component"),
@@ -504,7 +507,7 @@ server = function(input, output, session){
     
     # Quasi-Poisson note
     if (selected_model_type() == "Quasipoisson") {
-        out <- tagList(out, tags$hr(), tags$p(
+        out = tagList(out, tags$hr(), tags$p(
             tags$strong("Note: "),
             "Quasi-Poisson adjusts standard errors for overdispersion but ",
             "rate ratio point estimates are identical to Poisson. ",
@@ -513,8 +516,8 @@ server = function(input, output, session){
     }
 
     if (selected_model_type() == "Tweedie") {
-    p_val <- tryCatch(round(model$tweedie_power, 3), error = function(e) "unknown")
-    out <- tagList(out, tags$hr(), tags$p(
+    p_val = tryCatch(round(model$tweedie_power, 3), error = function(e) "unknown")
+    out = tagList(out, tags$hr(), tags$p(
         tags$strong("Note: "),
         paste0("Tweedie GLM fitted with power parameter p = ", p_val, ". "),
         "Rate ratios are exponentiated log-link coefficients. ",
@@ -527,7 +530,7 @@ server = function(input, output, session){
     # Assumption checks
     output$vif_table_output = renderTable({
     req(selected_model_type())
-    model <- resolve_model(selected_model_type())
+    model = resolve_model(selected_model_type())
     validate(need(!is.null(model),
         paste("Please fit the", selected_model_type(), "model first.")))
     
@@ -535,13 +538,13 @@ server = function(input, output, session){
     validate(need(length(input$predictors) >= 2,
         "VIF requires at least two predictors."))
     
-    vif_vals <- tryCatch(car::vif(model), error = function(e) NULL)
+    vif_vals = tryCatch(car::vif(model), error = function(e) NULL)
     
     validate(need(!is.null(vif_vals),
         "VIF could not be computed for this model."))
     
     # car::vif returns vector for main effects, matrix for models with interactions
-    vif_numeric <- if (is.matrix(vif_vals)) vif_vals[, "GVIF^(1/(2*Df))"]^2 else vif_vals
+    vif_numeric = if (is.matrix(vif_vals)) vif_vals[, "GVIF^(1/(2*Df))"]^2 else vif_vals
     
     data.frame(
         Term = names(vif_numeric),
@@ -551,10 +554,10 @@ server = function(input, output, session){
 
     output$assumption_checks_ui = renderUI({
         req(poisson_assumptions())
-        a <- poisson_assumptions()
+        a = poisson_assumptions()
 
-        make_item <- function(label, result, extra_ui = NULL) {
-            icon_col <- if (result$flagged) "red" else "darkgreen"
+        make_item = function(label, result, extra_ui = NULL) {
+            icon_col = if (result$flagged) "red" else "darkgreen"
             tagList(
                 tags$div(
                     style = "margin-bottom:10px;",
@@ -568,7 +571,7 @@ server = function(input, output, session){
             )
         }
 
-        epp_detail <- tags$small(glue::glue(
+        epp_detail = tags$small(glue::glue(
             " | total events = {a$events_per_pred$total_events}, ",
             "p = {a$events_per_pred$n_predictors}, ",
             "EPP = {a$events_per_pred$epp}"
@@ -595,7 +598,7 @@ server = function(input, output, session){
 
     output$summary_stats = renderPrint({
         req(data(), input$response)
-        s <- get_count_summary(data(), input$response)
+        s = get_count_summary(data(), input$response)
         cat("Mean:", s$mean, "\n")
         cat("Variance:", s$variance, "\n")
         cat("Min:", s$min, "\n")
@@ -603,15 +606,15 @@ server = function(input, output, session){
         cat("Proportion of zeros:", s$zero_prop, "\n")
     })
 
-    count_plot_obj <- reactive({
+    count_plot_obj = reactive({
         req(data(), input$response)
         ggplot(data(), aes(x = .data[[input$response]])) +
             geom_bar(fill = "steelblue") +
             labs(title = "Count Distribution", x = "Count Value", y = "Frequency") +
             theme_minimal()
     })
-    output$count_plot <- renderPlot({ count_plot_obj() })
-    output$dl_count_plot <- downloadHandler(
+    output$count_plot = renderPlot({ count_plot_obj() })
+    output$dl_count_plot = downloadHandler(
         filename = function() "count_distribution.png",
         content  = function(file) ggsave(file, count_plot_obj(), width = 8, height = 6, dpi = 300)
     )
@@ -624,14 +627,14 @@ server = function(input, output, session){
 
     output$predictor_ui = renderUI({
         req(data(), input$response)
-        all_vars     <- setdiff(names(data()), input$response)
-        numerics     <- all_vars[sapply(data()[, all_vars, drop = FALSE], is.numeric)]
-        categoricals <- all_vars[sapply(data()[, all_vars, drop = FALSE], function(x) !is.numeric(x))]
+        all_vars     = setdiff(names(data()), input$response)
+        numerics     = all_vars[sapply(data()[, all_vars, drop = FALSE], is.numeric)]
+        categoricals = all_vars[sapply(data()[, all_vars, drop = FALSE], function(x) !is.numeric(x))]
 
-        interaction_choices <- character(0)
+        interaction_choices = character(0)
         if (length(c(numerics, categoricals)) >= 2) {
-            pairs_list <- combn(c(numerics, categoricals), 2, simplify = FALSE)
-            interaction_choices <- setNames(
+            pairs_list = combn(c(numerics, categoricals), 2, simplify = FALSE)
+            interaction_choices = setNames(
                 vapply(pairs_list, \(p) paste(p, collapse = ":"), character(1)),
                 vapply(pairs_list, \(p) paste(p, collapse = " \u00d7 "), character(1))
             )
@@ -658,21 +661,21 @@ server = function(input, output, session){
     })
 
     # Slopes plot
-    simple_slopes_obj <- reactive({
+    simple_slopes_obj = reactive({
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
-        model     <- resolve_model(selected_model_type())
+        model     = resolve_model(selected_model_type())
         req(model)
-        vars      <- strsplit(input$jn_interaction, ":")[[1]]
-        int.var   <- vars[vars != input$jn_moderator]
-        moderator <- input$jn_moderator
-        dat       <- scaled_data()
-        int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
+        vars      = strsplit(input$jn_interaction, ":")[[1]]
+        int.var   = vars[vars != input$jn_moderator]
+        moderator = input$jn_moderator
+        dat       = scaled_data()
+        int.vars.classes = sapply(dat[, c(int.var, moderator)], class)
         if (all(int.vars.classes == "numeric")) {
-            m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
-            s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
-            terms_spec <- c(int.var, paste0(moderator, " [", round(m.mod - s.mod, 2), ",", round(m.mod + s.mod, 2), "]"))
-            pred <- data.frame(ggemmeans(model, terms = terms_spec))
-            pred <- pred |> mutate(group = case_when(
+            m.mod = mean(unlist(model$model[moderator]), na.rm = TRUE)
+            s.mod = sd(unlist(model$model[moderator]),   na.rm = TRUE)
+            terms_spec = c(int.var, paste0(moderator, " [", round(m.mod - s.mod, 2), ",", round(m.mod + s.mod, 2), "]"))
+            pred = data.frame(ggemmeans(model, terms = terms_spec))
+            pred = pred |> mutate(group = case_when(
                 group == round(m.mod - s.mod, 2) ~ paste0("Low (Mean - 1SD = ", round(m.mod - s.mod, 2), ")"),
                 TRUE                             ~ paste0("High (Mean + 1SD = ", round(m.mod + s.mod, 2), ")")
             ))
@@ -682,7 +685,7 @@ server = function(input, output, session){
                 labs(x = int.var, y = paste("Predicted", input$response), color = moderator, fill = moderator) +
                 scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") + theme_bw()
         } else {
-            pred <- data.frame(ggemmeans(model, terms = c(int.var, moderator)))
+            pred = data.frame(ggemmeans(model, terms = c(int.var, moderator)))
             ggplot(pred, aes(x = x, y = predicted, color = group, fill = group)) +
                 geom_point(position = position_dodge(0.25)) +
                 geom_errorbar(aes(ymin = conf.low, ymax = conf.high), position = position_dodge(0.25), width = 0.1) +
@@ -690,22 +693,22 @@ server = function(input, output, session){
                 scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") + theme_bw()
         }
     })
-    output$simple_slopes_plot <- renderPlot({ simple_slopes_obj() }, height = 400)
-    output$dl_simple_slopes <- downloadHandler(
+    output$simple_slopes_plot = renderPlot({ simple_slopes_obj() }, height = 400)
+    output$dl_simple_slopes = downloadHandler(
         filename = function() "simple_slopes.png",
         content  = function(file) ggsave(file, simple_slopes_obj(), width = 8, height = 6, dpi = 300)
     )
 
-    jn_plot_obj <- reactive({
+    jn_plot_obj = reactive({
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
-        model <- resolve_model(selected_model_type())
+        model = resolve_model(selected_model_type())
         req(model)
-        vars <- strsplit(input$jn_interaction, ":")[[1]]
-        pred <- vars[vars != input$jn_moderator]
+        vars = strsplit(input$jn_interaction, ":")[[1]]
+        pred = vars[vars != input$jn_moderator]
         plot_johnson_neyman(model, pred, input$jn_moderator)
     })
-    output$jn_plot <- renderPlot({ jn_plot_obj() }, height = 500)
-    output$dl_jn_plot <- downloadHandler(
+    output$jn_plot = renderPlot({ jn_plot_obj() }, height = 500)
+    output$dl_jn_plot = downloadHandler(
         filename = function() "johnson_neyman.png",
         content  = function(file) ggsave(file, jn_plot_obj(), width = 8, height = 6, dpi = 300)
     )
@@ -822,51 +825,51 @@ server = function(input, output, session){
     # JN Interpretations
     output$jn_interpretation_ui = renderUI({
     req(input$jn_interaction, input$jn_moderator, selected_model_type())
-    model <- resolve_model(selected_model_type())
+    model = resolve_model(selected_model_type())
     req(model)
 
-    vars  <- strsplit(input$jn_interaction, ":")[[1]]
-    pred  <- vars[vars != input$jn_moderator]
-    modx  <- input$jn_moderator
-    dat   <- model$model
+    vars  = strsplit(input$jn_interaction, ":")[[1]]
+    pred  = vars[vars != input$jn_moderator]
+    modx  = input$jn_moderator
+    dat   = model$model
 
-    cf  <- coef(model)
-    vc  <- vcov(model)
+    cf  = coef(model)
+    vc  = vcov(model)
 
-    beta_ixn <- paste0(pred, ":", modx)
+    beta_ixn = paste0(pred, ":", modx)
     if (!(beta_ixn %in% names(cf)))
-        beta_ixn <- paste0(modx, ":", pred)
+        beta_ixn = paste0(modx, ":", pred)
     req(beta_ixn %in% names(cf))
 
-    b1       <- if (pred %in% names(cf)) cf[pred] else 0
-    b3       <- cf[beta_ixn]
-    var_b1   <- if (pred %in% names(cf)) vc[pred, pred] else 0
-    var_b3   <- vc[beta_ixn, beta_ixn]
-    cov_b1b3 <- if (pred %in% names(cf)) vc[pred, beta_ixn] else 0
+    b1       = if (pred %in% names(cf)) cf[pred] else 0
+    b3       = cf[beta_ixn]
+    var_b1   = if (pred %in% names(cf)) vc[pred, pred] else 0
+    var_b3   = vc[beta_ixn, beta_ixn]
+    cov_b1b3 = if (pred %in% names(cf)) vc[pred, beta_ixn] else 0
 
-    modx_vals <- seq(min(dat[[modx]], na.rm = TRUE),
+    modx_vals = seq(min(dat[[modx]], na.rm = TRUE),
                         max(dat[[modx]], na.rm = TRUE),
                         length.out = 1000)
 
-    slope    <- b1 + b3 * modx_vals
-    se_slope <- sqrt(var_b1 + modx_vals^2 * var_b3 + 2 * modx_vals * cov_b1b3)
-    z_crit   <- qnorm(0.975)
-    sig      <- abs(slope / se_slope) > z_crit
+    slope    = b1 + b3 * modx_vals
+    se_slope = sqrt(var_b1 + modx_vals^2 * var_b3 + 2 * modx_vals * cov_b1b3)
+    z_crit   = qnorm(0.975)
+    sig      = abs(slope / se_slope) > z_crit
 
     # Find JN threshold(s)
-    transitions <- which(diff(sig) != 0)
-    modx_range  <- round(range(dat[[modx]], na.rm = TRUE), 2)
+    transitions = which(diff(sig) != 0)
+    modx_range  = round(range(dat[[modx]], na.rm = TRUE), 2)
 
     if (length(transitions) == 0) {
         if (all(sig)) {
-            jn_msg <- tags$li(paste0(
+            jn_msg = tags$li(paste0(
                 "The effect of ", pred, " on ", input$response,
                 " is statistically significant (p < .05) across the entire ",
                 "observed range of ", modx,
                 " [", modx_range[1], ", ", modx_range[2], "]."
             ))
         } else {
-            jn_msg <- tags$li(paste0(
+            jn_msg = tags$li(paste0(
                 "The effect of ", pred, " on ", input$response,
                 " is not statistically significant across the entire ",
                 "observed range of ", modx,
@@ -874,15 +877,15 @@ server = function(input, output, session){
             ))
         }
     } else {
-        thresholds <- round(modx_vals[transitions + 1], 2)
-        jn_msg <- tags$li(paste0(
+        thresholds = round(modx_vals[transitions + 1], 2)
+        jn_msg = tags$li(paste0(
             "When ", modx, " is OUTSIDE the interval [",
             paste(thresholds, collapse = ", "), "], the effect of ",
             pred, " is p < .05."
         ))
     }
 
-    note_msg <- paste0(
+    note_msg = paste0(
         "The range of observed values of ", modx,
         " is [", modx_range[1], ", ", modx_range[2], "]."
     )
