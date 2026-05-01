@@ -492,11 +492,28 @@ server = function(input, output, session){
 
     # Assumption checks
     output$vif_table_output = renderTable({
-        req(poisson_assumptions())
-        vif_tbl <- poisson_assumptions()$multicollinearity$vif_table
-        validate(need(!is.null(vif_tbl), "VIF cannot be computed for this model."))
-        vif_tbl
-    }, digits = 3)
+    req(selected_model_type())
+    model <- resolve_model(selected_model_type())
+    validate(need(!is.null(model),
+        paste("Please fit the", selected_model_type(), "model first.")))
+    
+    # Need at least 2 predictors for VIF
+    validate(need(length(input$predictors) >= 2,
+        "VIF requires at least two predictors."))
+    
+    vif_vals <- tryCatch(car::vif(model), error = function(e) NULL)
+    
+    validate(need(!is.null(vif_vals),
+        "VIF could not be computed for this model."))
+    
+    # car::vif returns vector for main effects, matrix for models with interactions
+    vif_numeric <- if (is.matrix(vif_vals)) vif_vals[, "GVIF^(1/(2*Df))"]^2 else vif_vals
+    
+    data.frame(
+        Term = names(vif_numeric),
+        VIF  = round(vif_numeric, 3)
+    )
+}, striped = TRUE, hover = TRUE, bordered = TRUE)
 
     output$assumption_checks_ui = renderUI({
         req(poisson_assumptions())
