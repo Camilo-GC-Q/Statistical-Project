@@ -16,7 +16,7 @@ ui = fluidPage(
             hr(),
             selectInput("model_type", "Select Model to Fit",
                 choices = c("Poisson", "Quasipoisson", "Negative Binomial",
-                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial", "COM-Poisson")),
+                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial", "COM-Poisson", "Tweedie")),
             actionButton("fit_model", "Fit Model", class = "btn btn-primary")
         ),
         mainPanel(
@@ -164,7 +164,8 @@ server = function(input, output, session){
             "Negative Binomial"              = get_incidence_rate_ratio_table(model),
             "Zero-Inflated Poisson"          = get_zip_irr_table(model),
             "Zero-Inflated Negative Binomial" = get_zinb_irr_table(model),
-            "COM-Poisson" = get_compois_irr_table(model)
+            "COM-Poisson" = get_compois_irr_table(model),
+            "Tweedie" = get_tweedie_irr_table(model)
         )
     })
 
@@ -285,7 +286,8 @@ server = function(input, output, session){
         `Negative Binomial` = NULL,
         `Zero-Inflated Poisson` = NULL,
         `Zero-Inflated Negative Binomial` = NULL,
-        `COM-Poisson` = NULL
+        `COM-Poisson` = NULL,
+        `Tweedie` = NULL
     )
 
     observeEvent(input$fit_model, {
@@ -298,7 +300,9 @@ server = function(input, output, session){
             "Negative Binomial" = fit_negative_binomial_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Zero-Inflated Poisson" = fit_zip_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Zero-Inflated Negative Binomial"  = fit_zinb_model(scaled_data(), input$response, input$predictors, formula_str = fml),
-            "COM-Poisson" = fit_compois_model(scaled_data(), input$response, input$predictors, formula_str = fml)
+            "COM-Poisson" = fit_compois_model(scaled_data(), input$response, input$predictors, formula_str = fml),
+            "Tweedie" = fit_tweedie_model(scaled_data(), input$response,
+                                input$predictors, formula_str = fml)
         )
     })
 
@@ -310,6 +314,7 @@ server = function(input, output, session){
     zip_model           = reactive(fitted_models[["Zero-Inflated Poisson"]])
     zinb_model          = reactive(fitted_models[["Zero-Inflated Negative Binomial"]])
     cmp_model           = reactive(fitted_models[["COM-Poisson"]])
+    tweedie_model = reactive(fitted_models[["Tweedie"]])
 
     # Formula display 
     formula_render = function() {
@@ -390,7 +395,8 @@ server = function(input, output, session){
     output$zero_inflation_test_ui = renderUI({
         req(selected_model_type())
         type <- selected_model_type()
-        if (type %in% c("Zero-Inflated Poisson", "Zero-Inflated Negative Binomial")) return(NULL)
+        if (type %in% c("Zero-Inflated Poisson", "Zero-Inflated Negative Binomial",
+                  "Tweedie")) return(NULL)
         model <- resolve_model(type)
         req(model)
         tagList(
@@ -488,6 +494,17 @@ server = function(input, output, session){
             "Inference (p-values, CIs) is more reliable when overdispersion is present."
         ))
     }
+
+    if (selected_model_type() == "Tweedie") {
+    p_val <- tryCatch(round(model$tweedie_power, 3), error = function(e) "unknown")
+    out <- tagList(out, tags$hr(), tags$p(
+        tags$strong("Note: "),
+        paste0("Tweedie GLM fitted with power parameter p = ", p_val, ". "),
+        "Rate ratios are exponentiated log-link coefficients. ",
+        "p \u2248 1 is Poisson-like; p \u2248 2 is Gamma-like; ",
+        "1 < p < 2 is compound Poisson-Gamma (allows exact zeros with continuous positive values)."
+    ))
+}
     out})
 
     # Assumption checks
