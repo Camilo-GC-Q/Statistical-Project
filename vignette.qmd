@@ -140,6 +140,100 @@ The Negative Binomial model results yield the following **Incidence Rate Ratios 
 
 ---
 
+## Interaction Analysis
+
+To further understand the significant Age × Treks interaction, the interaction was examined using simple slopes, estimated marginal means, marginal effects (emtrends), and a Johnson-Neyman plot. The moderator variable is Age and the focal predictor is Treks.
+
+### Simple Slopes Visualization
+
+![Simple slopes plot — predicted armadillo count by Treks at low and high Age](slope.png){width=85%}
+
+The simple slopes plot shows predicted armadillo counts as a function of Treks, separately for hunters with low age (Mean − 1SD = 22.23) and high age (Mean + 1SD = 51.89). The slope for low-age hunters is substantially steeper than for high-age hunters, indicating that the positive effect of treks on armadillo encounters is stronger among younger hunters. Both lines increase with treks, but the low-age group shows considerably more uncertainty at higher trek values.
+
+---
+
+### Estimated Marginal Means
+
+![Estimated marginal means and contrasts of marginal means](emm.png){width=90%}
+
+The estimated marginal means of Armadillos at the four combinations of Age (±1SD) and Treks (±1SD) are:
+
+| Age | Treks | Est. Marginal Mean | SE | Lower CI | Upper CI |
+|-----|-------|-------------------|-----|----------|----------|
+| Low (Mean − 1SD = 3.76) | Low (Mean − 1SD = 22.23) | 0.72 | 0.22 | 0.39 | 1.32 |
+| High (Mean + 1SD = 64.77) | Low (Mean − 1SD = 22.23) | 35.85 | 15.22 | 15.60 | 82.41 |
+| Low (Mean − 1SD = 3.76) | High (Mean + 1SD = 51.89) | 9.01 | 2.48 | 5.25 | 15.46 |
+| High (Mean + 1SD = 64.77) | High (Mean + 1SD = 51.89) | 26.37 | 3.78 | 19.92 | 34.92 |
+
+**Interpretation:**
+
+- When Age is low (3.76) and Treks is low (22.23), the estimated marginal mean of Armadillos is 0.72 (95% CI: 0.39, 1.32).
+- When Age is high (64.77) and Treks is low (22.23), the estimated marginal mean is 35.85 (95% CI: 15.60, 82.41) — a large increase driven by age alone at low trek frequency.
+- When Age is low (3.76) and Treks is high (51.89), the estimated marginal mean is 9.01 (95% CI: 5.25, 15.46).
+- When Age is high (64.77) and Treks is high (51.89), the estimated marginal mean is 26.37 (95% CI: 19.92, 34.92).
+
+---
+
+### Contrasts of Marginal Means
+
+All pairwise contrasts between the four Age × Treks combinations were statistically significant except the comparison between High Age/Low Treks and High Age/High Treks (t = 0.74, p = 0.88), suggesting that at high ages, the number of treks has little additional impact on predicted armadillo counts.
+
+Notable contrasts:
+
+- **Treks3.76 Age22.23 / Treks64.77 Age22.23:** t = −6.51, p < 0.0001 (95% CI: 0.00, 0.09) — significant.
+- **Treks3.76 Age22.23 / Treks3.76 Age51.89:** t = −6.04, p < 0.0001 (95% CI: 0.03, 0.23) — significant.
+- **Treks64.77 Age22.23 / Treks3.76 Age51.89:** t = 2.57, p = 0.0499 (95% CI: 1.00, 15.82) — marginally significant.
+- **Treks3.76 Age51.89 / Treks64.77 Age51.89:** t = −4.03, p = 0.0003 (95% CI: 0.17, 0.68) — significant.
+
+---
+
+### Marginal Effects (emtrends)
+
+![Marginal effects and contrasts of marginal effects](emtrends.png){width=90%}
+
+The marginal effects (slopes of Treks) at low and high levels of Age are:
+
+| Age | Slope of Treks | SE | t ratio | p-value | Lower CI | Upper CI |
+|-----|---------------|-----|---------|---------|----------|----------|
+| Low (Mean − 1SD) | 0.06 | 0.01 | 6.51 | < 0.0001 | 0.04 | 0.08 |
+| High (Mean + 1SD) | 0.02 | 0.00 | 4.03 | 0.0001 | 0.01 | 0.03 |
+
+- The effect of Treks is significant when Age is low (Mean − 1SD): Slope = 0.0641, t = 6.51, p < 0.0001.
+- The effect of Treks is significant when Age is high (Mean + 1SD): Slope = 0.0176, t = 4.03, p = 0.0001.
+
+Although the effect of Treks is significant at both levels of Age, it is meaningfully stronger for younger hunters — the slope at low age is approximately 3.6 times larger than at high age.
+
+---
+
+### Contrasts of Marginal Effects
+
+![Contrasts of marginal effects](emtrends_cont.png){width=70%}
+
+The contrast between the two slopes confirms that the effect of Treks differs significantly by Age:
+
+| Contrast | Estimate | SE | t ratio | p-value | Lower CI | Upper CI |
+|----------|----------|----|---------|---------|----------|----------|
+| Age22.23 − Age51.89 | 0.05 | 0.01 | 4.75 | < 0.0001 | 0.03 | 0.07 |
+
+The effect of Treks is significantly different between low and high Age groups (Estimate = 0.0465, t = 4.75, p < 0.0001), confirming that the interaction is meaningful: younger hunters show a substantially stronger positive relationship between treks and armadillo encounters than older hunters.
+
+---
+
+### Johnson-Neyman Plot
+
+![Johnson-Neyman plot for the Age × Treks interaction](jn.png){width=85%}
+
+The Johnson-Neyman plot displays the slope of Treks as a continuous function of Age, with shading indicating regions of statistical significance (blue = significant, red = insignificant).
+
+**Interpretation:**
+
+- When Age is outside the interval [56.92], the effect of Treks is p < .05.
+- The range of observed Age values is [16.5, 65.8].
+
+This means the positive effect of Treks on armadillo counts is statistically significant for most of the observed age range, but becomes non-significant at the upper tail — roughly for hunters older than 56.92 years. Younger hunters show a reliably stronger relationship between trek frequency and armadillo encounters.
+
+---
+
 ## Summary
 
-Trek frequency and age are both statistically significant predictors of armadillo encounters, and they interact. A **Negative Binomial** regression model was necessary to account for the overdispersion detected under the initial Poisson model (dispersion ratio = 3.77 under Poisson, 0.87 under Negative Binomial). Once the Negative Binomial model was adopted, all major diagnostic checks passed. Researchers studying armadillo encounter rates should account for both how often hunters go out and their age, as these factors jointly predict wildlife encounters.
+Trek frequency and age are both statistically significant predictors of armadillo encounters, and they interact. A Negative Binomial regression model was necessary to account for the overdispersion detected under the initial Poisson model (dispersion ratio = 3.77 under Poisson, 0.87 under Negative Binomial). Once the Negative Binomial model was adopted, all major diagnostic checks passed. Researchers studying armadillo encounter rates should account for both how often hunters go out and their age, as these factors jointly predict wildlife encounters.

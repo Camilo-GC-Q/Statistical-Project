@@ -95,6 +95,15 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#incidence-rate-ratios" id="toc-incidence-rate-ratios" class="nav-link" data-scroll-target="#incidence-rate-ratios">Incidence Rate Ratios</a></li>
   </ul></li>
+  <li><a href="#interaction-analysis" id="toc-interaction-analysis" class="nav-link" data-scroll-target="#interaction-analysis">Interaction Analysis</a>
+  <ul class="collapse">
+  <li><a href="#simple-slopes-visualization" id="toc-simple-slopes-visualization" class="nav-link" data-scroll-target="#simple-slopes-visualization">Simple Slopes Visualization</a></li>
+  <li><a href="#estimated-marginal-means" id="toc-estimated-marginal-means" class="nav-link" data-scroll-target="#estimated-marginal-means">Estimated Marginal Means</a></li>
+  <li><a href="#contrasts-of-marginal-means" id="toc-contrasts-of-marginal-means" class="nav-link" data-scroll-target="#contrasts-of-marginal-means">Contrasts of Marginal Means</a></li>
+  <li><a href="#marginal-effects-emtrends" id="toc-marginal-effects-emtrends" class="nav-link" data-scroll-target="#marginal-effects-emtrends">Marginal Effects (emtrends)</a></li>
+  <li><a href="#contrasts-of-marginal-effects" id="toc-contrasts-of-marginal-effects" class="nav-link" data-scroll-target="#contrasts-of-marginal-effects">Contrasts of Marginal Effects</a></li>
+  <li><a href="#johnson-neyman-plot" id="toc-johnson-neyman-plot" class="nav-link" data-scroll-target="#johnson-neyman-plot">Johnson-Neyman Plot</a></li>
+  </ul></li>
   <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
   </ul>
 </nav>
@@ -326,9 +335,210 @@ window.Quarto = {
 <hr>
 </section>
 </section>
+<section id="interaction-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="interaction-analysis">Interaction Analysis</h2>
+<p>To further understand the significant Age × Treks interaction, the interaction was examined using simple slopes, estimated marginal means, marginal effects (emtrends), and a Johnson-Neyman plot. The moderator variable is Age and the focal predictor is Treks.</p>
+<section id="simple-slopes-visualization" class="level3">
+<h3 class="anchored" data-anchor-id="simple-slopes-visualization">Simple Slopes Visualization</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="slope.png" class="img-fluid figure-img" style="width:85.0%"></p>
+<figcaption>Simple slopes plot — predicted armadillo count by Treks at low and high Age</figcaption>
+</figure>
+</div>
+<p>The simple slopes plot shows predicted armadillo counts as a function of Treks, separately for hunters with low age (Mean − 1SD = 22.23) and high age (Mean + 1SD = 51.89). The slope for low-age hunters is substantially steeper than for high-age hunters, indicating that the positive effect of treks on armadillo encounters is stronger among younger hunters. Both lines increase with treks, but the low-age group shows considerably more uncertainty at higher trek values.</p>
+<hr>
+</section>
+<section id="estimated-marginal-means" class="level3">
+<h3 class="anchored" data-anchor-id="estimated-marginal-means">Estimated Marginal Means</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="emm.png" class="img-fluid figure-img" style="width:90.0%"></p>
+<figcaption>Estimated marginal means and contrasts of marginal means</figcaption>
+</figure>
+</div>
+<p>The estimated marginal means of Armadillos at the four combinations of Age (±1SD) and Treks (±1SD) are:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 12%">
+<col style="width: 33%">
+<col style="width: 8%">
+<col style="width: 17%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Age</th>
+<th>Treks</th>
+<th>Est. Marginal Mean</th>
+<th>SE</th>
+<th>Lower CI</th>
+<th>Upper CI</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Low (Mean − 1SD = 3.76)</td>
+<td>Low (Mean − 1SD = 22.23)</td>
+<td>0.72</td>
+<td>0.22</td>
+<td>0.39</td>
+<td>1.32</td>
+</tr>
+<tr class="even">
+<td>High (Mean + 1SD = 64.77)</td>
+<td>Low (Mean − 1SD = 22.23)</td>
+<td>35.85</td>
+<td>15.22</td>
+<td>15.60</td>
+<td>82.41</td>
+</tr>
+<tr class="odd">
+<td>Low (Mean − 1SD = 3.76)</td>
+<td>High (Mean + 1SD = 51.89)</td>
+<td>9.01</td>
+<td>2.48</td>
+<td>5.25</td>
+<td>15.46</td>
+</tr>
+<tr class="even">
+<td>High (Mean + 1SD = 64.77)</td>
+<td>High (Mean + 1SD = 51.89)</td>
+<td>26.37</td>
+<td>3.78</td>
+<td>19.92</td>
+<td>34.92</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li>When Age is low (3.76) and Treks is low (22.23), the estimated marginal mean of Armadillos is 0.72 (95% CI: 0.39, 1.32).</li>
+<li>When Age is high (64.77) and Treks is low (22.23), the estimated marginal mean is 35.85 (95% CI: 15.60, 82.41) — a large increase driven by age alone at low trek frequency.</li>
+<li>When Age is low (3.76) and Treks is high (51.89), the estimated marginal mean is 9.01 (95% CI: 5.25, 15.46).</li>
+<li>When Age is high (64.77) and Treks is high (51.89), the estimated marginal mean is 26.37 (95% CI: 19.92, 34.92).</li>
+</ul>
+<hr>
+</section>
+<section id="contrasts-of-marginal-means" class="level3">
+<h3 class="anchored" data-anchor-id="contrasts-of-marginal-means">Contrasts of Marginal Means</h3>
+<p>All pairwise contrasts between the four Age × Treks combinations were statistically significant except the comparison between High Age/Low Treks and High Age/High Treks (t = 0.74, p = 0.88), suggesting that at high ages, the number of treks has little additional impact on predicted armadillo counts.</p>
+<p>Notable contrasts:</p>
+<ul>
+<li><strong>Treks3.76 Age22.23 / Treks64.77 Age22.23:</strong> t = −6.51, p &lt; 0.0001 (95% CI: 0.00, 0.09) — significant.</li>
+<li><strong>Treks3.76 Age22.23 / Treks3.76 Age51.89:</strong> t = −6.04, p &lt; 0.0001 (95% CI: 0.03, 0.23) — significant.</li>
+<li><strong>Treks64.77 Age22.23 / Treks3.76 Age51.89:</strong> t = 2.57, p = 0.0499 (95% CI: 1.00, 15.82) — marginally significant.</li>
+<li><strong>Treks3.76 Age51.89 / Treks64.77 Age51.89:</strong> t = −4.03, p = 0.0003 (95% CI: 0.17, 0.68) — significant.</li>
+</ul>
+<hr>
+</section>
+<section id="marginal-effects-emtrends" class="level3">
+<h3 class="anchored" data-anchor-id="marginal-effects-emtrends">Marginal Effects (emtrends)</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="emtrends.png" class="img-fluid figure-img" style="width:90.0%"></p>
+<figcaption>Marginal effects and contrasts of marginal effects</figcaption>
+</figure>
+</div>
+<p>The marginal effects (slopes of Treks) at low and high levels of Age are:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Age</th>
+<th>Slope of Treks</th>
+<th>SE</th>
+<th>t ratio</th>
+<th>p-value</th>
+<th>Lower CI</th>
+<th>Upper CI</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Low (Mean − 1SD)</td>
+<td>0.06</td>
+<td>0.01</td>
+<td>6.51</td>
+<td>&lt; 0.0001</td>
+<td>0.04</td>
+<td>0.08</td>
+</tr>
+<tr class="even">
+<td>High (Mean + 1SD)</td>
+<td>0.02</td>
+<td>0.00</td>
+<td>4.03</td>
+<td>0.0001</td>
+<td>0.01</td>
+<td>0.03</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The effect of Treks is significant when Age is low (Mean − 1SD): Slope = 0.0641, t = 6.51, p &lt; 0.0001.</li>
+<li>The effect of Treks is significant when Age is high (Mean + 1SD): Slope = 0.0176, t = 4.03, p = 0.0001.</li>
+</ul>
+<p>Although the effect of Treks is significant at both levels of Age, it is meaningfully stronger for younger hunters — the slope at low age is approximately 3.6 times larger than at high age.</p>
+<hr>
+</section>
+<section id="contrasts-of-marginal-effects" class="level3">
+<h3 class="anchored" data-anchor-id="contrasts-of-marginal-effects">Contrasts of Marginal Effects</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="emtrends_cont.png" class="img-fluid figure-img" style="width:70.0%"></p>
+<figcaption>Contrasts of marginal effects</figcaption>
+</figure>
+</div>
+<p>The contrast between the two slopes confirms that the effect of Treks differs significantly by Age:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Contrast</th>
+<th>Estimate</th>
+<th>SE</th>
+<th>t ratio</th>
+<th>p-value</th>
+<th>Lower CI</th>
+<th>Upper CI</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Age22.23 − Age51.89</td>
+<td>0.05</td>
+<td>0.01</td>
+<td>4.75</td>
+<td>&lt; 0.0001</td>
+<td>0.03</td>
+<td>0.07</td>
+</tr>
+</tbody>
+</table>
+<p>The effect of Treks is significantly different between low and high Age groups (Estimate = 0.0465, t = 4.75, p &lt; 0.0001), confirming that the interaction is meaningful: younger hunters show a substantially stronger positive relationship between treks and armadillo encounters than older hunters.</p>
+<hr>
+</section>
+<section id="johnson-neyman-plot" class="level3">
+<h3 class="anchored" data-anchor-id="johnson-neyman-plot">Johnson-Neyman Plot</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="jn.png" class="img-fluid figure-img" style="width:85.0%"></p>
+<figcaption>Johnson-Neyman plot for the Age × Treks interaction</figcaption>
+</figure>
+</div>
+<p>The Johnson-Neyman plot displays the slope of Treks as a continuous function of Age, with shading indicating regions of statistical significance (blue = significant, red = insignificant).</p>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li>When Age is outside the interval [56.92], the effect of Treks is p &lt; .05.</li>
+<li>The range of observed Age values is [16.5, 65.8].</li>
+</ul>
+<p>This means the positive effect of Treks on armadillo counts is statistically significant for most of the observed age range, but becomes non-significant at the upper tail — roughly for hunters older than 56.92 years. Younger hunters show a reliably stronger relationship between trek frequency and armadillo encounters.</p>
+<hr>
+</section>
+</section>
 <section id="summary" class="level2">
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
-<p>Trek frequency and age are both statistically significant predictors of armadillo encounters, and they interact. A <strong>Negative Binomial</strong> regression model was necessary to account for the overdispersion detected under the initial Poisson model (dispersion ratio = 3.77 under Poisson, 0.87 under Negative Binomial). Once the Negative Binomial model was adopted, all major diagnostic checks passed. Researchers studying armadillo encounter rates should account for both how often hunters go out and their age, as these factors jointly predict wildlife encounters.</p>
+<p>Trek frequency and age are both statistically significant predictors of armadillo encounters, and they interact. A Negative Binomial regression model was necessary to account for the overdispersion detected under the initial Poisson model (dispersion ratio = 3.77 under Poisson, 0.87 under Negative Binomial). Once the Negative Binomial model was adopted, all major diagnostic checks passed. Researchers studying armadillo encounter rates should account for both how often hunters go out and their age, as these factors jointly predict wildlife encounters.</p>
 </section>
 
 </main>
