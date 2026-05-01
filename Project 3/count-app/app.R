@@ -109,9 +109,11 @@ ui = fluidPage(
                             hr(),
                             h4("Marginal Effects (emtrends)"),
                             tableOutput("emtrends_table"),
+                            uiOutput("emtrends_interpretation_ui"),
                             hr(),
                             h4("Contrasts of Marginal Effects"),
                             tableOutput("emtrends_contrasts_table"),
+                            uiOutput("emtrends_contrasts_interpretation_ui"),
                             hr(),
                             h4("Johnson-Neyman Plot"),
                             downloadButton("dl_jn_plot", "Download", icon = icon("Download")),
@@ -719,6 +721,35 @@ server = function(input, output, session){
         tags$ul(
             purrr::map(bullets, ~ tags$li(.x, style = "margin-bottom: 6px;"))
         )
+    })
+
+    #EMtrends and Contrasts Interpretation
+    output$emtrends_interpretation_ui = renderUI({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars      = strsplit(input$jn_interaction, ":")[[1]]
+        int.var   = vars[vars != input$jn_moderator][1]
+        moderator = input$jn_moderator
+
+        tbl = get_emtrends_table(model, int.var, moderator, data())
+        req(!is.null(tbl))
+        bullets = interpret_emtrends(tbl, int.var, moderator)
+        tags$ul(purrr::map(bullets, ~ tags$li(.x, style = "margin-bottom: 6px;")))
+    })
+
+    output$emtrends_contrasts_interpretation_ui = renderUI({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model = resolve_model(selected_model_type())
+        req(model)
+        vars      = strsplit(input$jn_interaction, ":")[[1]]
+        int.var   = vars[vars != input$jn_moderator][1]
+        moderator = input$jn_moderator
+
+        ct = get_emtrends_contrasts(model, int.var, moderator, data())
+        req(!is.null(ct))
+        bullets = interpret_emtrends_contrasts(ct, int.var, moderator)
+        tags$ul(purrr::map(bullets, ~ tags$li(.x, style = "margin-bottom: 6px;")))
     })
 
 

@@ -324,5 +324,55 @@ get_emtrends_contrasts <- function(model, int.var, moderator, dat) {
  
     bullets
 }
+# Interpret EMTrends and their Contrasts
+interpret_emtrends <- function(emtrends_table, int.var, moderator, alpha = 0.05) {
+    moderator_col <- names(emtrends_table)[1]
+    slope_col     <- grep("Slope of", names(emtrends_table), value = TRUE)[1]
 
+    bullets <- mapply(
+        FUN = function(mod_level, slope, t_ratio, p_value) {
+            p_num     <- suppressWarnings(as.numeric(as.character(p_value)))
+            sig_label <- if (!is.na(p_num) && p_num < alpha) "significant" else "not significant"
+            p_display <- if (!is.na(p_num)) {
+                if (p_num < 0.0001) "< 0.0001" else formatC(p_num, format = "f", digits = 4)
+            } else as.character(p_value)
+
+            sprintf(
+                "The effect of %s is %s when %s is %s (Slope = %.4f, t ratio = %.4f, p-value = %s).",
+                int.var, sig_label, moderator, mod_level,
+                slope, t_ratio, p_display
+            )
+        },
+        mod_level = emtrends_table[[moderator_col]],
+        slope     = emtrends_table[[slope_col]],
+        t_ratio   = emtrends_table[["t ratio"]],
+        p_value   = emtrends_table[["p-value"]],
+        SIMPLIFY  = TRUE
+    )
+    bullets
+}
+
+interpret_emtrends_contrasts <- function(contrast_table, int.var, moderator, alpha = 0.05) {
+    bullets <- mapply(
+        FUN = function(contrast, estimate, t_ratio, p_value) {
+            p_num     <- suppressWarnings(as.numeric(as.character(p_value)))
+            sig_label <- if (!is.na(p_num) && p_num < alpha) "significantly different" else "not significantly different"
+            p_display <- if (!is.na(p_num)) {
+                if (p_num < 0.0001) "< 0.0001" else formatC(p_num, format = "f", digits = 4)
+            } else as.character(p_value)
+
+            sprintf(
+                "The effect of %s is %s by %s (Contrast = %s, Estimate = %.4f, t ratio = %.4f, p-value = %s).",
+                int.var, sig_label, moderator,
+                contrast, estimate, t_ratio, p_display
+            )
+        },
+        contrast = contrast_table[["Contrast"]],
+        estimate = contrast_table[["Estimate"]],
+        t_ratio  = contrast_table[["t ratio"]],
+        p_value  = contrast_table[["p-value"]],
+        SIMPLIFY = TRUE
+    )
+    bullets
+}
 
