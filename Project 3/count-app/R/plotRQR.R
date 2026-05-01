@@ -175,6 +175,29 @@ check_rqr_assumptions = function(mod, rqr) {
 
 # ── Main plot function ─────────────────────────────────────────────────────────
 plotRQR = function(mod) {
+    # CMP models can't use RQR infrastructure — return informative placeholder
+    if (inherits(mod, "cmp")) {
+        p <- ggplot() +
+            annotate("text", x = 0.5, y = 0.5,
+                     label = "RQR diagnostics are not available for COM-Poisson models.",
+                     size = 5, hjust = 0.5) +
+            theme_bw()
+        # Return the expected list structure so rqr_checks_ui doesn't crash
+        dummy_finding <- list(flagged = FALSE, message = "Not applicable for COM-Poisson.")
+        return(list(
+            plot = p,
+            checks = list(
+                findings = list(
+                    normality     = dummy_finding,
+                    dispersion    = dummy_finding,
+                    zeros         = dummy_finding,
+                    mean_variance = dummy_finding
+                ),
+                recommendation = "COM-Poisson handles both over- and underdispersion natively."
+            )
+        ))
+    }
+    
     lambdas = as.numeric(fitted(mod))
     counts  = as.numeric(mod$y)
     rqr     = compute_rqr(mod)

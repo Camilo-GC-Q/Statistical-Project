@@ -16,7 +16,7 @@ ui = fluidPage(
             hr(),
             selectInput("model_type", "Select Model to Fit",
                 choices = c("Poisson", "Quasipoisson", "Negative Binomial",
-                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial")),
+                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial", "COM-Poisson")),
             actionButton("fit_model", "Fit Model", class = "btn btn-primary")
         ),
         mainPanel(
@@ -175,7 +175,8 @@ server = function(input, output, session){
             "Quasipoisson"                   = get_quasi_rate_ratio_table(model),
             "Negative Binomial"              = get_incidence_rate_ratio_table(model),
             "Zero-Inflated Poisson"          = get_zip_irr_table(model),
-            "Zero-Inflated Negative Binomial" = get_zinb_irr_table(model)
+            "Zero-Inflated Negative Binomial" = get_zinb_irr_table(model),
+            "COM-Poisson" = get_compois_irr_table(model)
         )
     })
 
@@ -285,7 +286,8 @@ server = function(input, output, session){
         Quasipoisson      = NULL,
         `Negative Binomial` = NULL,
         `Zero-Inflated Poisson` = NULL,
-        `Zero-Inflated Negative Binomial` = NULL
+        `Zero-Inflated Negative Binomial` = NULL,
+        `COM-Poisson` = NULL
     )
 
     observeEvent(input$fit_model, {
@@ -297,7 +299,8 @@ server = function(input, output, session){
             "Quasipoisson"      = fit_quasi_poisson_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Negative Binomial" = fit_negative_binomial_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Zero-Inflated Poisson" = fit_zip_model(scaled_data(), input$response, input$predictors, formula_str = fml),
-            "Zero-Inflated Negative Binomial"  = fit_zinb_model(scaled_data(), input$response, input$predictors, formula_str = fml)
+            "Zero-Inflated Negative Binomial"  = fit_zinb_model(scaled_data(), input$response, input$predictors, formula_str = fml),
+            "COM-Poisson" = fit_compois_model(scaled_data(), input$response, input$predictors, formula_str = fml)
         )
     })
 
@@ -308,6 +311,7 @@ server = function(input, output, session){
     nb_model            = reactive(fitted_models[["Negative Binomial"]])
     zip_model           = reactive(fitted_models[["Zero-Inflated Poisson"]])
     zinb_model          = reactive(fitted_models[["Zero-Inflated Negative Binomial"]])
+    cmp_model           = reactive(fitted_models[["COM-Poisson"]])
 
     # Formula display 
     formula_render = function() {
@@ -321,6 +325,7 @@ server = function(input, output, session){
     output$quasi_poisson_formula = renderPrint(formula_render())
     output$zinb_model_formula    = renderPrint(formula_render())
     output$zip_model_formula     = renderPrint(formula_render())
+    output$cmp_model_formula     = renderPrint(formula_render())
 
     # Model tables
     output$rate_ratio_table = renderTable({
@@ -346,6 +351,11 @@ server = function(input, output, session){
     output$zip_irr_table = renderTable({
         req(zip_model())
         get_zip_irr_table(zip_model())
+    })
+
+    output$cmp_irr_table = renderTable({
+        req(cmp_model())
+        get_compois_irr_table(cmp_model())
     })
 
     # Pairwise plots 

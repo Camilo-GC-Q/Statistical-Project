@@ -1,4 +1,12 @@
 interpret_count_model = function(model, response, predictors) {
+  count_df <- data.frame(
+        term      = names(coef(model)),
+        estimate  = coef(model),
+        std.error = sdev(model)[seq_along(coef(model))],
+        statistic = NA_real_,
+        p.value   = NA_real_
+    )
+    
   model_class <- class(model)
   is_zeroinfl <- inherits(model, "zeroinfl")
   is_nb       <- inherits(model, "negbin")
