@@ -45,7 +45,22 @@ ui = fluidPage(
                                 class = "btn btn-primary"),
                             br(),
                             br(),
-                            uiOutput("assumption_checks_ui")
+                            uiOutput("assumption_checks_ui"),
+                            hr(),
+                            tags$p(tags$strong("Influence Checks")),
+                            tags$p("Make sure to evaluate whether there are outliers or influential points:"),
+                            br(),
+                            checkboxInput("assume_leverage",
+                                "Few/no observations with large leverage values.", value = FALSE),
+                            checkboxInput("assume_cooks",
+                                "Few/no observations with large Cook's distance values.", value = FALSE),
+                            checkboxInput("assume_dffits",
+                                "Few/no observations with DFFITS with large magnitude.", value = FALSE),
+                            br(),
+                            actionButton("check_influence", "Check Observations",
+                                class = "btn btn-secondary"),
+                            br(), br(),
+                            uiOutput("influence_verdict_ui")
                         ),
                         mainPanel(
                             h4("VIF Table"),
@@ -56,45 +71,6 @@ ui = fluidPage(
                             h4("Influence Diagnostics"),
                             plotOutput("assumption_influence_plot", height = "700px"),
                             uiOutput("zero_inflation_test_ui")
-                        )
-                    )
-                ),
-                tabPanel("Assumptions",
-                    sidebarLayout(
-                        sidebarPanel(
-                            tags$p(tags$strong("Step 1:"),
-                                " Confirm assumptions verified by study design."),
-                            checkboxInput("assume_independent",
-                                "Observations are random and independent",
-                                value = FALSE)
-                        ),
-                        mainPanel(
-                            br(),
-                            plotOutput("assumption_residual_plot", height = "700px")
-                        )
-                    )
-                ),
-                tabPanel("Outliers",
-                    br(),
-                    sidebarLayout(
-                        sidebarPanel(
-                            tags$p("Make sure to evaluate whether there are outliers or influential points:"),
-                            br(),
-                            checkboxInput("assume_leverage",
-                                "Few/no observations with large leverage values.", value = FALSE),
-                            checkboxInput("assume_cooks",
-                                "Few/no observations with large Cook's distance values.", value = FALSE),
-                            checkboxInput("assume_dffits",
-                                "Few/no observations with DFFITS with large magnitude.", value = FALSE),
-                            checkboxInput("assume_residuals",
-                                 "Few/no observations with outlying residuals.", value = FALSE),
-                            br(),
-                            actionButton("check_influence", "Check Observations",
-                                class = "btn btn-secondary"),
-                            br(), br(),
-                            uiOutput("influence_verdict_ui")
-                        ),
-                        mainPanel(
                         )
                     )
                 ),
