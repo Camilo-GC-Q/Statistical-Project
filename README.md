@@ -52,7 +52,9 @@ Rscript -e "shiny::runApp('.')"
 
 ---
 
-## Vignette
+## Vignette: 
+
+Link: https://camilo-gc-q.github.io/Statistical-Project/vignette.html
 
 A worked example using the app is available in `vignette.qmd`. It walks through a full count regression analysis of the McMillan Ache Armadillo dataset, including model selection, diagnostics, and interaction analysis using the Negative Binomial model.
 
