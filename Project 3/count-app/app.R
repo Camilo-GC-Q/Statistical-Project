@@ -177,6 +177,12 @@ server = function(input, output, session){
         plotRQR(model)
     }, height = 800)
 
+    output$dl_rqr_plot <- downloadHandler(
+        filename = function() "rqr_plots.png",
+        content  = function(file) ggsave(file, rqr_results()$plot, width = 10, height = 7, dpi = 300)
+    )
+
+
     rqr_results = reactive({
         req(selected_model_type())
         model = resolve_model(selected_model_type())
@@ -354,15 +360,16 @@ server = function(input, output, session){
 
 
     # Pairwise plots 
-    output$pair_plot = renderPlot({
+    pair_plot_obj <- reactive({
         req(data(), input$response, input$predictors, selected_model_type())
-        plot_count_pairs(
-            df         = data(),
-            response   = input$response,
-            predictors = input$predictors,
-            model_type = selected_model_type()
-        )
+        plot_count_pairs(df = data(), response = input$response,
+                         predictors = input$predictors, model_type = selected_model_type())
     })
+    output$pair_plot <- renderPlot({ pair_plot_obj() })
+    output$dl_pair_plot <- downloadHandler(
+        filename = function() "pairwise_plots.png",
+        content  = function(file) ggsave(file, pair_plot_obj(), width = 10, height = 10, dpi = 300)
+    )
 
     # Coefficient correlation matrix
     output$coeff_cor_table = renderTable({
@@ -379,10 +386,16 @@ server = function(input, output, session){
     }, height = 700)
 
     # Influence Plot
-    output$assumption_influence_plot = renderPlot({
+    influence_plot_obj <- reactive({
         req(poisson_model())
         plotInfluence(poisson_model())
-    }, height = 700)
+    })
+    output$assumption_influence_plot = renderPlot({ influence_plot_obj() }, height = 700)
+    output$dl_influence_plot <- downloadHandler(
+        filename = function() "influence_plots.png",
+        content  = function(file) ggsave(file, influence_plot_obj(), width = 10, height = 7, dpi = 300)
+    )
+
 
     output$zero_inflation_test_ui = renderUI({
         req(selected_model_type())
@@ -408,6 +421,17 @@ server = function(input, output, session){
         sim = DHARMa::simulateResiduals(model)
         DHARMa::testZeroInflation(sim)
     }, height = 400)
+
+    output$dl_zero_inflation_plot = downloadHandler(
+        filename = function() "zero_inflation_test.png",
+        content  = function(file) {
+            model <- resolve_model(selected_model_type())
+            sim   <- DHARMa::simulateResiduals(model)
+            png(file, width = 800, height = 600)
+            DHARMa::testZeroInflation(sim)
+            dev.off()
+        }
+    )
 
 
     influence_checked = eventReactive(input$check_influence, {
@@ -578,15 +602,18 @@ server = function(input, output, session){
         cat("Proportion of zeros:", s$zero_prop, "\n")
     })
 
-    output$count_plot = renderPlot({
+    count_plot_obj <- reactive({
         req(data(), input$response)
-        df <- data()
-        y  <- df[[input$response]]
-        ggplot(df, aes(x = y)) +
+        ggplot(data(), aes(x = .data[[input$response]])) +
             geom_bar(fill = "steelblue") +
             labs(title = "Count Distribution", x = "Count Value", y = "Frequency") +
             theme_minimal()
     })
+    output$count_plot <- renderPlot({ count_plot_obj() })
+    output$dl_count_plot <- downloadHandler(
+        filename = function() "count_distribution.png",
+        content  = function(file) ggsave(file, count_plot_obj(), width = 8, height = 6, dpi = 300)
+    )
 
     output$response_ui = renderUI({
         req(data())
@@ -630,17 +657,15 @@ server = function(input, output, session){
     })
 
     # Slopes plot
-    output$simple_slopes_plot = renderPlot({
+    simple_slopes_obj <- reactive({
         req(input$jn_interaction, input$jn_moderator, selected_model_type())
-        model    <- resolve_model(selected_model_type())
+        model     <- resolve_model(selected_model_type())
         req(model)
         vars      <- strsplit(input$jn_interaction, ":")[[1]]
         int.var   <- vars[vars != input$jn_moderator]
         moderator <- input$jn_moderator
         dat       <- scaled_data()
-
         int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
-
         if (all(int.vars.classes == "numeric")) {
             m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
             s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
@@ -654,42 +679,35 @@ server = function(input, output, session){
                 geom_line() +
                 geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, linetype = "dotted") +
                 labs(x = int.var, y = paste("Predicted", input$response), color = moderator, fill = moderator) +
-                scale_color_brewer(palette = "Set1") +
-                scale_fill_brewer(palette = "Set1") +
-                theme_bw()
+                scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") + theme_bw()
         } else {
             pred <- data.frame(ggemmeans(model, terms = c(int.var, moderator)))
             ggplot(pred, aes(x = x, y = predicted, color = group, fill = group)) +
                 geom_point(position = position_dodge(0.25)) +
-                geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
-                              position = position_dodge(0.25), width = 0.1) +
+                geom_errorbar(aes(ymin = conf.low, ymax = conf.high), position = position_dodge(0.25), width = 0.1) +
                 labs(x = int.var, y = paste("Predicted", input$response), color = moderator, fill = moderator) +
-                scale_color_brewer(palette = "Set1") +
-                scale_fill_brewer(palette = "Set1") +
-                theme_bw()
+                scale_color_brewer(palette = "Set1") + scale_fill_brewer(palette = "Set1") + theme_bw()
         }
-    }, height = 400)
-
-    output$jn_plot = renderPlot({
-    req(input$jn_interaction, input$jn_moderator, selected_model_type())
-    model = resolve_model(selected_model_type())
-    req(model)
-
-    vars = strsplit(input$jn_interaction, ":")[[1]]
-    pred = vars[vars != input$jn_moderator][1]
-    moderator = input$jn_moderator
-
-    tryCatch({
-        plot_johnson_neyman(model, pred, moderator)
-    }, error = function(e) {
-        print(e)  # shows in console
-        ggplot() +
-            annotate("text", x = 0.5, y = 0.5,
-                     label = paste("Error:", e$message),
-                     size = 5) +
-            theme_void()
     })
-})
+    output$simple_slopes_plot <- renderPlot({ simple_slopes_obj() }, height = 400)
+    output$dl_simple_slopes <- downloadHandler(
+        filename = function() "simple_slopes.png",
+        content  = function(file) ggsave(file, simple_slopes_obj(), width = 8, height = 6, dpi = 300)
+    )
+
+    jn_plot_obj <- reactive({
+        req(input$jn_interaction, input$jn_moderator, selected_model_type())
+        model <- resolve_model(selected_model_type())
+        req(model)
+        vars <- strsplit(input$jn_interaction, ":")[[1]]
+        pred <- vars[vars != input$jn_moderator]
+        plot_johnson_neyman(model, pred, input$jn_moderator)
+    })
+    output$jn_plot <- renderPlot({ jn_plot_obj() }, height = 500)
+    output$dl_jn_plot <- downloadHandler(
+        filename = function() "johnson_neyman.png",
+        content  = function(file) ggsave(file, jn_plot_obj(), width = 8, height = 6, dpi = 300)
+    )
 
     # EMM Table Output
     output$emmeans_table = renderTable({
