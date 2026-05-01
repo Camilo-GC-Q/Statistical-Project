@@ -56,7 +56,7 @@ plot_johnson_neyman = function(model, pred, modx) {
     if (!(beta_ixn %in% names(cf)))
         beta_ixn <- paste0(modx, ":", pred)
 
-    if (!(beta_pred %in% names(cf)) || !(beta_ixn %in% names(cf))) {
+    if (!(beta_ixn %in% names(cf))) {
         return(ggplot() +
             annotate("text", x = 0.5, y = 0.5,
                 label = "Johnson-Neyman could not be computed.\nEnsure the interaction term is included in the model.",
@@ -64,11 +64,17 @@ plot_johnson_neyman = function(model, pred, modx) {
             theme_bw())
     }
 
-    b1       <- cf[beta_pred]
-    b3       <- cf[beta_ixn]
-    var_b1   <- vc[beta_pred, beta_pred]
-    var_b3   <- vc[beta_ixn,  beta_ixn]
-    cov_b1b3 <- vc[beta_pred, beta_ixn]
+    if (beta_pred %in% names(cf)) {
+        b1       <- cf[beta_pred]
+        var_b1   <- vc[beta_pred, beta_pred]
+        cov_b1b3 <- vc[beta_pred, beta_ixn]
+    } else {
+        b1       <- 0
+        var_b1   <- 0
+        cov_b1b3 <- 0
+    }
+    b3     <- cf[beta_ixn]
+    var_b3 <- vc[beta_ixn, beta_ixn]
 
     modx_vals <- seq(min(dat[[modx]], na.rm = TRUE),
                      max(dat[[modx]], na.rm = TRUE),
