@@ -57,31 +57,9 @@ plotInfluence<-function(mod){
                linetype="dotted",
                size=.75,
                color="red")
-  
-  # ####################################
-  # # Create Data for Residual Plot"
-  # ####################################
-  ggdat<-data.frame(obs=d$obs,
-                    y=rstudent(mod))
-  ggdat.out2<-ggdat %>% filter(abs(y)>2)
-  ggdat.out3<-ggdat %>% filter(abs(y)>3)
 
-  # ####################################
-  # # Create Residual Plot"
-  # ####################################
-  p4<-ggplot(data=ggdat,aes(x=obs,y=y))+
-    geom_point(shape=1)+
-    geom_hline(yintercept = 0,color="red",linetype="dashed")+
-    xlab("Observation Number")+
-    ylab("Studentized Residual")+
-    theme_bw()+
-    geom_hline(yintercept = c(-3,3), color="red", linetype="dotted",size=0.75)+
-    geom_hline(yintercept = c(-2,2), color="orange", linetype="dotted",size=0.75)+
-    geom_point(data=ggdat.out2, aes(x=obs,y=y), fill="orange", shape=21)+
-    geom_point(data=ggdat.out3, aes(x=obs,y=y), fill="red", shape=21)
-  
   ####################################
   # Print Plots"
   ####################################
-  (p1|p2)/(p3|p4)
+  (p1|p2)/p3
 }

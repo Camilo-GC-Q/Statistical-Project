@@ -37,10 +37,25 @@ ui = fluidPage(
                 tabPanel("Diagnostics",
                     sidebarLayout(
                         sidebarPanel(
-                            uiOutput("rqr_checks_ui")
+                            uiOutput("rqr_checks_ui"),
+                            hr(),
+                            tags$p(tags$strong("Assumption Checks")),
+                            tags$p("Fit a Poisson model, then click to run checks."),
+                            actionButton("check_poisson_assumptions", "Check Assumptions",
+                                class = "btn btn-primary"),
+                            br(),
+                            br(),
+                            uiOutput("assumption_checks_ui")
                         ),
                         mainPanel(
-                            plotOutput("rqr_plot", height = "700px")
+                            h4("VIF Table"),
+                            tableOutput("vif_table_output"),
+                            hr(),
+                            plotOutput("rqr_plot", height = "700px"),
+                            hr(),
+                            h4("Influence Diagnostics"),
+                            plotOutput("assumption_influence_plot", height = "700px"),
+                            uiOutput("zero_inflation_test_ui")
                         )
                     )
                 ),
@@ -51,20 +66,10 @@ ui = fluidPage(
                                 " Confirm assumptions verified by study design."),
                             checkboxInput("assume_independent",
                                 "Observations are random and independent",
-                                value = FALSE),
-                            hr(),
-                            tags$p(tags$strong("Step 2:"),
-                                " Fit a Poisson model, then click to run checks."),
-                            actionButton("check_poisson_assumptions", "Check Assumptions",
-                                class = "btn btn-primary"),
-                            br(), br(),
-                            uiOutput("assumption_checks_ui")
+                                value = FALSE)
                         ),
                         mainPanel(
                             br(),
-                            h4("VIF Table"),
-                            tableOutput("vif_table_output"),
-                            hr(),
                             plotOutput("assumption_residual_plot", height = "700px")
                         )
                     )
@@ -90,7 +95,6 @@ ui = fluidPage(
                             uiOutput("influence_verdict_ui")
                         ),
                         mainPanel(
-                            plotOutput("assumption_influence_plot", height = "700px")
                         )
                     )
                 ),
@@ -389,6 +393,30 @@ server = function(input, output, session){
         plotInfluence(poisson_model())
     }, height = 700)
 
+    output$zero_inflation_test_ui = renderUI({
+        req(selected_model_type())
+        type <- selected_model_type()
+        if (type %in% c("Zero-Inflated Poisson", "Zero-Inflated Negative Binomial")) return(NULL)
+        model <- resolve_model(type)
+        req(model)
+        tagList(
+            hr(),
+            h4("Zero-Inflation Test"),
+            plotOutput("zero_inflation_plot", height = "400px")
+        )
+    })
+
+    output$zero_inflation_plot = renderPlot({
+        req(selected_model_type())
+        type <- selected_model_type()
+        req(!type %in% c("Zero-Inflated Poisson", "Zero-Inflated Negative Binomial"))
+        model <- resolve_model(type)
+        req(model)
+        sim = DHARMa::simulateResiduals(model)
+        DHARMa::testZeroInflation(sim)
+    }, height = 400)
+
+
     influence_checked = eventReactive(input$check_influence, {
         list(
             leverage  = input$assume_leverage,
@@ -470,7 +498,9 @@ server = function(input, output, session){
     # Assumption checks
     output$vif_table_output = renderTable({
         req(poisson_assumptions())
-        poisson_assumptions()$multicollinearity$vif_table
+        vif_tbl <- poisson_assumptions()$multicollinearity$vif_table
+        validate(need(!is.null(vif_tbl), "VIF cannot be computed for this model."))
+        vif_tbl
     }, digits = 3)
 
     output$assumption_checks_ui = renderUI({

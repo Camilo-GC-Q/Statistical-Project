@@ -1,6 +1,6 @@
 check_poisson_assumptions = function(model, df, response, predictors) {
   
-  vars_needed <- c(response, predictors)
+  vars_needed <- c(response, predictors[!grepl(":", predictors)])
   model_data  <- df |> dplyr::select(dplyr::all_of(vars_needed)) |> tidyr::drop_na()
   y           <- model_data[[response]]
   fitted_vals <- fitted(model)
@@ -115,7 +115,7 @@ check_poisson_assumptions = function(model, df, response, predictors) {
     vif_vals <- tryCatch(car::vif(model), error = function(e) NULL)
     if (!is.null(vif_vals)) {
       # car::vif returns a vector or matrix; extract numeric values
-      vif_numeric <- if (is.matrix(vif_vals)) vif_vals[, 1] else vif_vals
+      vif_numeric <- if (is.matrix(vif_vals)) vif_vals[, 3] else vif_vals
       max_vif     <- max(vif_numeric)
       vif_flagged <- max_vif > 5
       vif_df      <- data.frame(
