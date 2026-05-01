@@ -176,124 +176,174 @@ check_rqr_assumptions = function(mod, rqr) {
 # ── Main plot function ─────────────────────────────────────────────────────────
 plotRQR = function(mod) {
     if (inherits(mod, "glm") &&
-        !is.null(mod$family) &&
-        grepl("Tweedie|tweedie", mod$family$family, ignore.case = TRUE)) {
+    !is.null(mod$family) &&
+    grepl("Tweedie|tweedie", mod$family$family, ignore.case = TRUE)) {
 
-        sim <- tryCatch(
-            DHARMa::simulateResiduals(mod, plot = FALSE, n = 500),
-            error = function(e) NULL
+    p_power <- mod$tweedie_power
+    mu      <- fitted(mod)
+    phi     <- summary(mod)$dispersion
+
+    # Manually simulate from Tweedie distribution using fitted values
+    sim <- tryCatch({
+    n_sim  <- 500
+    n_obs  <- length(mu)
+    y_obs  <- mod$y
+
+    # Simulate n_sim datasets 
+    # so we loop over observations, not simulations
+    sim_mat <- matrix(NA, nrow = n_obs, ncol = n_sim)
+    for (i in seq_len(n_obs)) {
+        sim_mat[i, ] <- tweedie::rtweedie(
+            n     = n_sim,
+            mu    = mu[i],       # scalar for each observation
+            phi   = phi,
+            power = p_power
         )
+    }
 
-        if (is.null(sim)) {
-            p <- ggplot() +
-                annotate("text", x = 0.5, y = 0.5,
-                         label = "DHARMa simulation failed for this Tweedie model.\nTry refitting with fewer predictors.",
-                         size = 4, hjust = 0.5) +
-                theme_bw()
-        } else {
-            # Extract residuals and fitted quantiles from DHARMa object
-            res_df <- data.frame(
-                fitted    = sim$fittedPredictedResponse,
-                residuals = residuals(sim)   # uniformly distributed [0,1] under correct model
-            )
+    # Compute scaled residuals: proportion of simulated values <= observed
+    scaled_res <- numeric(n_obs)
+    for (i in seq_len(n_obs)) {
+        scaled_res[i] <- mean(sim_mat[i, ] <= y_obs[i])
+        # small jitter to break ties
+        scaled_res[i] <- scaled_res[i] +
+            runif(1, -1 / (2 * n_sim), 1 / (2 * n_sim))
+        scaled_res[i] <- pmax(pmin(scaled_res[i], 1), 0)
+    }
 
-            # QQ plot: uniform residuals should follow diagonal
-            p1 <- ggplot(res_df, aes(sample = residuals)) +
-                geom_abline(slope = 1, intercept = 0,
-                            color = "red", linetype = "dashed") +
-                stat_qq(distribution = qunif, color = "black", size = 0.8) +
-                labs(title = "QQ Plot (Uniform)",
-                     x = "Expected", y = "Observed") +
-                theme_bw()
+    list(scaled_res = scaled_res, mu = mu, y_obs = y_obs)
+}, error = function(e) {
+    message("Tweedie simulation error: ", e$message)
+    NULL
+})
 
-            # Residuals vs fitted
-            p2 <- ggplot(res_df, aes(x = fitted, y = residuals)) +
-                geom_point(shape = 1, alpha = 0.6) +
-                geom_hline(yintercept = c(0.25, 0.5, 0.75),
-                           linetype = "dashed", color = "red", alpha = 0.5) +
-                geom_smooth(method = "loess", se = FALSE,
-                            color = "black", linewidth = 0.8) +
-                labs(title = "Residuals vs Fitted",
-                     x = "Fitted Values",
-                     y = "DHARMa Residuals") +
-                theme_bw()
+    if (is.null(sim)) {
+        p <- ggplot() +
+            annotate("text", x = 0.5, y = 0.5,
+                     label = paste0(
+                         "Tweedie simulation failed.\n",
+                         "Ensure the 'tweedie' package is installed.\n",
+                         "install.packages('tweedie')"
+                     ),
+                     size = 4, hjust = 0.5) +
+            theme_bw()
 
-            p <- p1 | p2
-        }
-
-        # Build checks from DHARMa tests
-        if (!is.null(sim)) {
-            unif_test  <- DHARMa::testUniformity(sim, plot = FALSE)
-            disp_test  <- DHARMa::testDispersion(sim, plot = FALSE)
-            zero_test  <- tryCatch(
-                DHARMa::testZeroInflation(sim, plot = FALSE),
-                error = function(e) NULL
-            )
-
-            norm_find <- list(
-                flagged = unif_test$p.value < 0.05,
-                message = if (unif_test$p.value < 0.05)
-                    paste0("Residuals deviate from uniformity (KS p = ",
-                           round(unif_test$p.value, 4), ")")
-                else
-                    paste0("Residuals appear uniform (KS p = ",
-                           round(unif_test$p.value, 4), ")")
-            )
-
-            disp_find <- list(
-                flagged = disp_test$p.value < 0.05,
-                message = if (disp_test$p.value < 0.05)
-                    paste0("Dispersion issue detected (p = ",
-                           round(disp_test$p.value, 4), ")")
-                else
-                    paste0("No dispersion issue detected (p = ",
-                           round(disp_test$p.value, 4), ")")
-            )
-
-            zero_find <- if (!is.null(zero_test)) list(
-                flagged = zero_test$p.value < 0.05,
-                message = if (zero_test$p.value < 0.05)
-                    paste0("Excess zeros detected (p = ",
-                           round(zero_test$p.value, 4), ")")
-                else
-                    paste0("No excess zeros detected (p = ",
-                           round(zero_test$p.value, 4), ")")
-            ) else list(flagged = FALSE,
-                        message = "Zero-inflation test not available.")
-
-            mv_find <- list(
-                flagged = FALSE,
-                message = paste0("Tweedie power parameter p = ",
-                                 round(mod$tweedie_power, 3),
-                                 ". Mean-variance handled by Tweedie family.")
-            )
-
-            rec <- if (!norm_find$flagged && !disp_find$flagged)
-                paste0("Tweedie model (p = ", round(mod$tweedie_power, 3),
-                       ") appears adequately specified.")
-            else
-                "Consider adjusting the Tweedie power parameter or checking for model misspecification."
-
-        } else {
-            dummy    <- list(flagged = FALSE, message = "DHARMa simulation unavailable.")
-            norm_find <- disp_find <- zero_find <- mv_find <- dummy
-            rec       <- "DHARMa simulation failed — diagnostics unavailable."
-        }
-
+        dummy <- list(flagged = FALSE,
+                      message = "Simulation unavailable.")
         return(list(
             plot   = p,
             checks = list(
                 findings = list(
-                    normality     = norm_find,
-                    dispersion    = disp_find,
-                    zeros         = zero_find,
-                    mean_variance = mv_find
+                    normality     = dummy,
+                    dispersion    = dummy,
+                    zeros         = dummy,
+                    mean_variance = dummy
                 ),
-                recommendation = rec
+                recommendation = "Install the 'tweedie' package for diagnostics."
             )
         ))
     }
-    
+
+    res_df <- data.frame(
+        fitted    = sim$mu,
+        residuals = sim$scaled_res
+    )
+
+    # QQ plot vs uniform
+    p1 <- ggplot(res_df, aes(sample = residuals)) +
+        geom_abline(slope = 1, intercept = 0,
+                    color = "red", linetype = "dashed") +
+        stat_qq(distribution = qunif, color = "black", size = 0.8) +
+        labs(title = "QQ Plot (Uniform)",
+             x = "Expected", y = "Observed") +
+        theme_bw()
+
+    # Residuals vs fitted
+    p2 <- ggplot(res_df, aes(x = fitted, y = residuals)) +
+        geom_point(shape = 1, alpha = 0.6) +
+        geom_hline(yintercept = c(0.25, 0.5, 0.75),
+                   linetype = "dashed", color = "red", alpha = 0.5) +
+        geom_smooth(method = "loess", se = FALSE,
+                    color = "black", linewidth = 0.8) +
+        labs(title = "Residuals vs Fitted",
+             x = "Fitted Values",
+             y = "Scaled Residuals") +
+        theme_bw()
+
+    p <- p1 | p2
+
+    # Build checks from the scaled residuals
+    ks_p      <- tryCatch(
+        ks.test(sim$scaled_res, "punif")$p.value,
+        error = function(e) NA
+    )
+    mean_res  <- mean(sim$scaled_res)
+    var_res   <- var(sim$scaled_res)
+    # Uniform[0,1] has variance = 1/12 ≈ 0.0833
+    disp_flag <- abs(var_res - 1/12) > 0.02
+    zero_prop <- mean(sim$y_obs == 0)
+    exp_zeros <- mean(tweedie::ptweedie(
+        0, mu = sim$mu, phi = phi, power = p_power
+    ))
+
+    norm_find <- list(
+        flagged = !is.na(ks_p) && ks_p < 0.05,
+        message = if (is.na(ks_p)) "KS test unavailable." else
+            paste0("KS test for uniformity: p = ", round(ks_p, 4),
+                   if (ks_p < 0.05) " — residuals deviate from uniform."
+                   else " — residuals appear uniform.")
+    )
+
+    disp_find <- list(
+        flagged = disp_flag,
+        message = paste0(
+            "Residual variance = ", round(var_res, 4),
+            " (expected ~0.0833 for uniform). ",
+            if (disp_flag) "Possible dispersion issue." else "Dispersion looks adequate."
+        )
+    )
+
+    zero_find <- list(
+        flagged = zero_prop > (exp_zeros + 0.05),
+        message = paste0(
+            "Observed zeros: ", round(100 * zero_prop, 1), "%, ",
+            "expected: ", round(100 * exp_zeros, 1), "%. ",
+            if (zero_prop > (exp_zeros + 0.05)) "Excess zeros detected."
+            else "Zero proportion adequate."
+        )
+    )
+
+    mv_find <- list(
+        flagged = FALSE,
+        message = paste0(
+            "Tweedie power p = ", round(p_power, 3),
+            ", dispersion \u03c6 = ", round(phi, 4), "."
+        )
+    )
+
+    rec <- if (!norm_find$flagged && !disp_find$flagged)
+        paste0("Tweedie model (p = ", round(p_power, 3),
+               ") appears adequately specified.")
+    else
+        paste0("Tweedie model (p = ", round(p_power, 3),
+               ") may be misspecified. Consider adjusting the power parameter.")
+
+    return(list(
+        plot   = p,
+        checks = list(
+            findings = list(
+                normality     = norm_find,
+                dispersion    = disp_find,
+                zeros         = zero_find,
+                mean_variance = mv_find
+            ),
+            recommendation = rec
+        )
+    ))
+}
+
+# ... rest of existing plotRQR unchanged
+
     # CMP models can't use RQR infrastructure — return informative placeholder
     if (inherits(mod, "cmp")) {
         p <- ggplot() +

@@ -16,7 +16,7 @@ ui = fluidPage(
             hr(),
             selectInput("model_type", "Select Model to Fit",
                 choices = c("Poisson", "Quasipoisson", "Negative Binomial",
-                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial", "COM-Poisson", "Tweedie")),
+                "Zero-Inflated Poisson", "Zero-Inflated Negative Binomial", "Tweedie")),
             actionButton("fit_model", "Fit Model", class = "btn btn-primary")
         ),
         mainPanel(
@@ -164,7 +164,6 @@ server = function(input, output, session){
             "Negative Binomial"              = get_incidence_rate_ratio_table(model),
             "Zero-Inflated Poisson"          = get_zip_irr_table(model),
             "Zero-Inflated Negative Binomial" = get_zinb_irr_table(model),
-            "COM-Poisson" = get_compois_irr_table(model),
             "Tweedie" = get_tweedie_irr_table(model)
         )
     })
@@ -286,7 +285,6 @@ server = function(input, output, session){
         `Negative Binomial` = NULL,
         `Zero-Inflated Poisson` = NULL,
         `Zero-Inflated Negative Binomial` = NULL,
-        `COM-Poisson` = NULL,
         `Tweedie` = NULL
     )
 
@@ -300,7 +298,6 @@ server = function(input, output, session){
             "Negative Binomial" = fit_negative_binomial_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Zero-Inflated Poisson" = fit_zip_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Zero-Inflated Negative Binomial"  = fit_zinb_model(scaled_data(), input$response, input$predictors, formula_str = fml),
-            "COM-Poisson" = fit_compois_model(scaled_data(), input$response, input$predictors, formula_str = fml),
             "Tweedie" = fit_tweedie_model(scaled_data(), input$response,
                                 input$predictors, formula_str = fml)
         )
@@ -313,7 +310,6 @@ server = function(input, output, session){
     nb_model            = reactive(fitted_models[["Negative Binomial"]])
     zip_model           = reactive(fitted_models[["Zero-Inflated Poisson"]])
     zinb_model          = reactive(fitted_models[["Zero-Inflated Negative Binomial"]])
-    cmp_model           = reactive(fitted_models[["COM-Poisson"]])
     tweedie_model = reactive(fitted_models[["Tweedie"]])
 
     # Formula display 
@@ -356,10 +352,6 @@ server = function(input, output, session){
         get_zip_irr_table(zip_model())
     })
 
-    output$cmp_irr_table = renderTable({
-        req(cmp_model())
-        get_compois_irr_table(cmp_model())
-    })
 
     # Pairwise plots 
     output$pair_plot = renderPlot({
