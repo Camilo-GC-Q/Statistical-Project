@@ -283,7 +283,7 @@ plotRQR = function(mod) {
     disp_flag <- abs(var_res - 1/12) > 0.02
     zero_prop <- mean(sim$y_obs == 0)
     exp_zeros <- mean(tweedie::ptweedie(
-        0, mu = sim$mu, phi = phi, power = p_power
+        rep(0, length(sim$mu)), mu = sim$mu, phi = phi, power = p_power
     ))
 
     norm_find <- list(
