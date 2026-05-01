@@ -26,9 +26,11 @@ ui = fluidPage(
                 ),
                 tabPanel("Data Summary",
                     verbatimTextOutput("summary_stats"),
+                    downloadButton("dl_count_plot", "Download", icon = icon("Download")),
                     plotOutput("count_plot"),
                     hr(),
                     h4("Pairwise Plots"),
+                    downloadButton("dl_pair_plot", "Download", icon = icon("Download")),
                     plotOutput("pair_plot", height = "800px"),
                     hr(),
                     h4("Correlation Matrix of Model Terms"),
@@ -66,9 +68,11 @@ ui = fluidPage(
                             h4("VIF Table"),
                             tableOutput("vif_table_output"),
                             hr(),
+                            downloadButton("dl_rqr_plot", "Download", icon = icon("Download")),
                             plotOutput("rqr_plot", height = "700px"),
                             hr(),
                             h4("Influence Diagnostics"),
+                            downloadButton("dl_influence_plot", "Download", icon = icon("Download")),
                             plotOutput("assumption_influence_plot", height = "700px"),
                             uiOutput("zero_inflation_test_ui")
                         )
@@ -92,6 +96,7 @@ ui = fluidPage(
                         ),
                         mainPanel(
                             h4("Simple Slopes Visualization"),
+                            downloadButton("dl_simple_slopes", "Download", icon = icon("Download")),
                             plotOutput("simple_slopes_plot", height = "400px"),
                             hr(),
                             h4("Estimated Marginal Means"),
@@ -109,6 +114,7 @@ ui = fluidPage(
                             tableOutput("emtrends_contrasts_table"),
                             hr(),
                             h4("Johnson-Neyman Plot"),
+                            downloadButton("dl_jn_plot", "Download", icon = icon("Download")),
                             plotOutput("jn_plot", height = "500px")
                         )
                     )  
@@ -378,6 +384,7 @@ server = function(input, output, session){
         tagList(
             hr(),
             h4("Zero-Inflation Test"),
+            downloadButton("dl_zero_inflation_plot", "Download", icon = icon("Download")),
             plotOutput("zero_inflation_plot", height = "400px")
         )
     })
