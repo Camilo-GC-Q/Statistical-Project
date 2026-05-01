@@ -7,10 +7,10 @@ fit_poisson_model = function(df, response, predictors, formula_str = NULL){
     model_data = df |>
         drop_na()
 
-    fml_str <- if (!is.null(formula_str)) formula_str else
+    fml_str = if (!is.null(formula_str)) formula_str else
                     paste(response, "~", paste(predictors, collapse = " + "))
 
-    model_formula <- as.formula(fml_str)
+    model_formula = as.formula(fml_str)
     
     glm(model_formula, family = poisson(link = "log"), data = model_data)
 }

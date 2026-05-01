@@ -4,73 +4,73 @@ library(tidyverse)
 
 # Estimated Marginal Means
 
-get_emmeans_table <- function(model, int.var, moderator, dat) {
+get_emmeans_table = function(model, int.var, moderator, dat) {
   
-  int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
+  int.vars.classes = sapply(dat[, c(int.var, moderator)], class)
   
   if (all(int.vars.classes == "numeric")) {
-    m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
-    s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
-    m.var <- mean(unlist(model$model[int.var]),   na.rm = TRUE)
-    s.var <- sd(unlist(model$model[int.var]),     na.rm = TRUE)
+    m.mod = mean(unlist(model$model[moderator]), na.rm = TRUE)
+    s.mod = sd(unlist(model$model[moderator]),   na.rm = TRUE)
+    m.var = mean(unlist(model$model[int.var]),   na.rm = TRUE)
+    s.var = sd(unlist(model$model[int.var]),     na.rm = TRUE)
     
-    modvarat <- list(
+    modvarat = list(
       c(round(m.mod - s.mod, 2), round(m.mod + s.mod, 2)),
       c(round(m.var - s.var, 2), round(m.var + s.var, 2))
     )
-    names(modvarat) <- c(moderator, int.var)
+    names(modvarat) = c(moderator, int.var)
     
-    mod.emmeans <- data.frame(
+    mod.emmeans = data.frame(
       emmeans(object = model, spec = c(int.var, moderator),
               var = int.var, at = modvarat, type = "response")
     )
     
-    mod.emmeans[[int.var]] <- ifelse(
+    mod.emmeans[[int.var]] = ifelse(
       mod.emmeans[[int.var]] == round(m.var - s.var, 2),
       paste0("Low (Mean - 1SD = ",  round(m.var - s.var, 2), ")"),
       paste0("High (Mean + 1SD = ", round(m.var + s.var, 2), ")")
     )
-    mod.emmeans[[moderator]] <- ifelse(
+    mod.emmeans[[moderator]] = ifelse(
       mod.emmeans[[moderator]] == round(m.mod - s.mod, 2),
       paste0("Low (Mean - 1SD = ",  round(m.mod - s.mod, 2), ")"),
       paste0("High (Mean + 1SD = ", round(m.mod + s.mod, 2), ")")
     )
     
   } else if (all(int.vars.classes == "factor")) {
-    mod.emmeans <- data.frame(
+    mod.emmeans = data.frame(
       emmeans(object = model, spec = c(int.var, moderator),
               var = int.var, type = "response")
     )
     
   } else if (int.vars.classes[moderator] == "factor") {
-    m.var <- mean(unlist(model$model[int.var]), na.rm = TRUE)
-    s.var <- sd(unlist(model$model[int.var]),   na.rm = TRUE)
-    modvarat <- list(c(round(m.var - s.var, 2), round(m.var + s.var, 2)))
-    names(modvarat) <- int.var
+    m.var = mean(unlist(model$model[int.var]), na.rm = TRUE)
+    s.var = sd(unlist(model$model[int.var]),   na.rm = TRUE)
+    modvarat = list(c(round(m.var - s.var, 2), round(m.var + s.var, 2)))
+    names(modvarat) = int.var
     
-    mod.emmeans <- data.frame(
+    mod.emmeans = data.frame(
       emmeans(model, specs = c(moderator, int.var),
               var = int.var, at = modvarat, type = "response")
     )
     
-    mod.emmeans[[int.var]] <- ifelse(
+    mod.emmeans[[int.var]] = ifelse(
       mod.emmeans[[int.var]] == round(m.var - s.var, 2),
       paste0("Low (Mean - 1SD = ",  round(m.var - s.var, 2), ")"),
       paste0("High (Mean + 1SD = ", round(m.var + s.var, 2), ")")
     )
     
   } else {
-    m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
-    s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
-    modvarat <- list(c(round(m.mod - s.mod, 2), round(m.mod + s.mod, 2)))
-    names(modvarat) <- moderator
+    m.mod = mean(unlist(model$model[moderator]), na.rm = TRUE)
+    s.mod = sd(unlist(model$model[moderator]),   na.rm = TRUE)
+    modvarat = list(c(round(m.mod - s.mod, 2), round(m.mod + s.mod, 2)))
+    names(modvarat) = moderator
     
-    mod.emmeans <- data.frame(
+    mod.emmeans = data.frame(
       emmeans(model, specs = c(moderator, int.var),
               var = moderator, at = modvarat, type = "response")
     )
     
-    mod.emmeans[[moderator]] <- ifelse(
+    mod.emmeans[[moderator]] = ifelse(
       mod.emmeans[[moderator]] == round(m.mod - s.mod, 2),
       paste0("Low (Mean - 1SD = ",  round(m.mod - s.mod, 2), ")"),
       paste0("High (Mean + 1SD = ", round(m.mod + s.mod, 2), ")")
@@ -84,9 +84,9 @@ get_emmeans_table <- function(model, int.var, moderator, dat) {
 }
 
 # Interpretation of EMM
-interpret_emmeans <- function(emm_table, outcome, int.var, moderator) {
+interpret_emmeans = function(emm_table, outcome, int.var, moderator) {
   
-  bullets <- mapply(
+  bullets = mapply(
     FUN = function(mod_level, var_level, emm, lower, upper) {
       sprintf(
         "The estimated marginal mean of %s for %s = %s and %s = %s is %.2f (95%% CI: %.2f, %.2f).",
@@ -109,19 +109,19 @@ interpret_emmeans <- function(emm_table, outcome, int.var, moderator) {
 
 
 # Contrasts of Marginal Means
-get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
+get_emmeans_contrasts = function(model, int.var, moderator, dat) {
   
-  int.vars.classes <- sapply(dat[, c(int.var, moderator)], class)
+  int.vars.classes = sapply(dat[, c(int.var, moderator)], class)
   
-  build_contrast_table <- function(emm_obj) {
+  build_contrast_table = function(emm_obj) {
     p_obj = pairs(emm_obj)
-    ct  <- data.frame(p_obj)
-    cti <- data.frame(confint(p_obj))
+    ct  = data.frame(p_obj)
+    cti = data.frame(confint(p_obj))
     lower_col = names(cti)[grep("low|LCL", names(cti), ignore.case = TRUE)][1]
     upper_col = names(cti)[grep("upper|UCL", names(cti), ignore.case = TRUE)][1]
     if (!is.na(lower_col)) ct$lower.CL = cti[[lower_col]]
     if (!is.na(upper_col)) ct$upper.CL = cti[[upper_col]]
-    ct$contrast <- gsub("\\.scaled", "", ct$contrast)
+    ct$contrast = gsub("\\.scaled", "", ct$contrast)
     ct |>
       dplyr::select(-any_of("null")) |>
       set_rownames(NULL) |>
@@ -129,44 +129,44 @@ get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
   }
   
   if (all(int.vars.classes == "numeric")) {
-    m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
-    s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
-    m.var <- mean(unlist(model$model[int.var]),   na.rm = TRUE)
-    s.var <- sd(unlist(model$model[int.var]),     na.rm = TRUE)
+    m.mod = mean(unlist(model$model[moderator]), na.rm = TRUE)
+    s.mod = sd(unlist(model$model[moderator]),   na.rm = TRUE)
+    m.var = mean(unlist(model$model[int.var]),   na.rm = TRUE)
+    s.var = sd(unlist(model$model[int.var]),     na.rm = TRUE)
     
-    modvarat <- list(
+    modvarat = list(
       c(round(m.mod - s.mod, 2), round(m.mod + s.mod, 2)),
       c(round(m.var - s.var, 2), round(m.var + s.var, 2))
     )
-    names(modvarat) <- c(moderator, int.var)
+    names(modvarat) = c(moderator, int.var)
     
     # Use by= to get contrasts within each moderator level directly
     # avoids add_grouping which errors when emmeans already has nested structure
-    emm <- emmeans(object = model, spec = c(int.var, moderator),
+    emm = emmeans(object = model, spec = c(int.var, moderator),
                    at = modvarat, type = "response")
     build_contrast_table(emm)
 
   } else if (all(int.vars.classes == "factor")) {
-    emm <- emmeans(model, specs = c(int.var, moderator), var = moderator, type = "response")
+    emm = emmeans(model, specs = c(int.var, moderator), var = moderator, type = "response")
     build_contrast_table(emm)
     
   } else if (int.vars.classes[moderator] == "factor") {
-    m <- mean(unlist(model$model[int.var]), na.rm = TRUE)
-    s <- sd(unlist(model$model[int.var]),   na.rm = TRUE)
-    modvarat <- list(c(round(m - s, 2), round(m + s, 2)))
-    names(modvarat) <- int.var
+    m = mean(unlist(model$model[int.var]), na.rm = TRUE)
+    s = sd(unlist(model$model[int.var]),   na.rm = TRUE)
+    modvarat = list(c(round(m - s, 2), round(m + s, 2)))
+    names(modvarat) = int.var
     
-    emm <- emmeans(model, specs = c(moderator, int.var),
+    emm = emmeans(model, specs = c(moderator, int.var),
                    var = moderator, at = modvarat, type = "response")
     build_contrast_table(emm)
     
   } else {
-    m <- mean(unlist(model$model[moderator]), na.rm = TRUE)
-    s <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
-    modvarat <- list(c(round(m - s, 2), round(m + s, 2)))
-    names(modvarat) <- moderator
+    m = mean(unlist(model$model[moderator]), na.rm = TRUE)
+    s = sd(unlist(model$model[moderator]),   na.rm = TRUE)
+    modvarat = list(c(round(m - s, 2), round(m + s, 2)))
+    names(modvarat) = moderator
     
-    emm <- emmeans(model, specs = c(moderator, int.var),
+    emm = emmeans(model, specs = c(moderator, int.var),
                    var = moderator, at = modvarat, type = "response")
     build_contrast_table(emm)
   }
@@ -175,7 +175,7 @@ get_emmeans_contrasts <- function(model, int.var, moderator, dat) {
 # EMTrends
 get_emtrends_table = function(model, int.var, moderator, dat) {
 
-    int.vars.classes <- sapply(dat[, c(int.var, moderator)], function(x) {
+    int.vars.classes = sapply(dat[, c(int.var, moderator)], function(x) {
       if (is.numeric(x)) "numeric" else "factor"
   })
 
@@ -211,9 +211,9 @@ get_emtrends_table = function(model, int.var, moderator, dat) {
     ci_low    = grep("lower|LCL", names(mod.emtrends), ignore.case = TRUE, value = TRUE)[1]
     ci_high   = grep("upper|UCL", names(mod.emtrends), ignore.case = TRUE, value = TRUE)[1]
 
-    names(mod.emtrends)[names(mod.emtrends) == trend_col] <- paste("Slope of", int.var)
-    if (!is.na(ci_low))  names(mod.emtrends)[names(mod.emtrends) == ci_low]  <- "Lower CI"
-    if (!is.na(ci_high)) names(mod.emtrends)[names(mod.emtrends) == ci_high] <- "Upper CI"
+    names(mod.emtrends)[names(mod.emtrends) == trend_col] = paste("Slope of", int.var)
+    if (!is.na(ci_low))  names(mod.emtrends)[names(mod.emtrends) == ci_low]  = "Lower CI"
+    if (!is.na(ci_high)) names(mod.emtrends)[names(mod.emtrends) == ci_high] = "Upper CI"
 
     mod.emtrends = dplyr::select(mod.emtrends, -any_of("null"))
 
@@ -228,23 +228,23 @@ get_emtrends_table = function(model, int.var, moderator, dat) {
     mod.emtrends
 }
 
-get_emtrends_contrasts <- function(model, int.var, moderator, dat) {
+get_emtrends_contrasts = function(model, int.var, moderator, dat) {
 
-    int.vars.classes <- sapply(dat[, c(int.var, moderator)], function(x) {
+    int.vars.classes = sapply(dat[, c(int.var, moderator)], function(x) {
       if (is.numeric(x)) "numeric" else "factor"
   })
 
     # emtrends requires int.var to be numeric
     if (int.vars.classes[int.var] != "numeric") return(NULL)
 
-    build_emtrend_contrast <- function(emt_obj) {
-        ct  <- data.frame(pairs(emt_obj))
-        cti <- data.frame(confint(pairs(emt_obj)))
-        lower_col <- names(cti)[grep("low|LCL", names(cti), ignore.case = TRUE)][1]
-        upper_col <- names(cti)[grep("upper|UCL", names(cti), ignore.case = TRUE)][1]
-        if (!is.na(lower_col)) ct$lower.CL <- cti[[lower_col]]
-        if (!is.na(upper_col)) ct$upper.CL <- cti[[upper_col]]
-        ct$contrast <- gsub("\\.scaled", "", ct$contrast)
+    build_emtrend_contrast = function(emt_obj) {
+        ct  = data.frame(pairs(emt_obj))
+        cti = data.frame(confint(pairs(emt_obj)))
+        lower_col = names(cti)[grep("low|LCL", names(cti), ignore.case = TRUE)][1]
+        upper_col = names(cti)[grep("upper|UCL", names(cti), ignore.case = TRUE)][1]
+        if (!is.na(lower_col)) ct$lower.CL = cti[[lower_col]]
+        if (!is.na(upper_col)) ct$upper.CL = cti[[upper_col]]
+        ct$contrast = gsub("\\.scaled", "", ct$contrast)
         ct %>%
             dplyr::select(-any_of("null")) %>%
             set_rownames(NULL) %>%
@@ -253,17 +253,17 @@ get_emtrends_contrasts <- function(model, int.var, moderator, dat) {
     }
 
     if (all(int.vars.classes == "numeric")) {
-        m.mod <- mean(unlist(model$model[moderator]), na.rm = TRUE)
-        s.mod <- sd(unlist(model$model[moderator]),   na.rm = TRUE)
-        modvarat <- list(c(round(m.mod - s.mod, 2), round(m.mod + s.mod, 2)))
-        names(modvarat) <- moderator
+        m.mod = mean(unlist(model$model[moderator]), na.rm = TRUE)
+        s.mod = sd(unlist(model$model[moderator]),   na.rm = TRUE)
+        modvarat = list(c(round(m.mod - s.mod, 2), round(m.mod + s.mod, 2)))
+        names(modvarat) = moderator
 
-        emt <- emtrends(object = model, specs = moderator, var = int.var, at = modvarat)
+        emt = emtrends(object = model, specs = moderator, var = int.var, at = modvarat)
         build_emtrend_contrast(emt)
 
     } else if (int.vars.classes[moderator] == "factor") {
         # categorical moderator — contrast slopes across factor levels
-        emt <- emtrends(model, specs = moderator, var = int.var)
+        emt = emtrends(model, specs = moderator, var = int.var)
         build_emtrend_contrast(emt)
 
     } else {
@@ -274,24 +274,24 @@ get_emtrends_contrasts <- function(model, int.var, moderator, dat) {
 
 
 # Interpret EMM Contrasts
-  interpret_emmeans_contrasts <- function(contrast_table, outcome, alpha = 0.05) {
+  interpret_emmeans_contrasts = function(contrast_table, outcome, alpha = 0.05) {
  
-    format_p <- function(p) {
+    format_p = function(p) {
       if (is.na(p))     return("NA")
       if (p < 0.0001)   return("< 0.0001")
       if (p < 0.001)    return(paste0("= ", formatC(p, format = "f", digits = 4)))
       return(paste0("= ", formatC(p, format = "f", digits = 4)))
     }
  
-    bullets <- mapply(
+    bullets = mapply(
       FUN = function(contrast, estimate, se, df, t_ratio, p_value, lower, upper) {
  
         # Determine significance — handle "<0.0001" strings as well as numeric
-        p_num <- suppressWarnings(as.numeric(as.character(p_value)))
-        sig_label <- if (!is.na(p_num) && p_num < alpha) "significant" else "not significant"
+        p_num = suppressWarnings(as.numeric(as.character(p_value)))
+        sig_label = if (!is.na(p_num) && p_num < alpha) "significant" else "not significant"
  
         # Format p for display
-        p_display <- if (!is.na(p_num)) {
+        p_display = if (!is.na(p_num)) {
           if (p_num < 0.0001) "< 0.0001" else formatC(p_num, format = "f", digits = 4)
         } else {
           as.character(p_value)   # already a string like "<0.0001"
@@ -323,15 +323,15 @@ get_emtrends_contrasts <- function(model, int.var, moderator, dat) {
     bullets
 }
 # Interpret EMTrends and their Contrasts
-interpret_emtrends <- function(emtrends_table, int.var, moderator, alpha = 0.05) {
-    moderator_col <- names(emtrends_table)[1]
-    slope_col     <- grep("Slope of", names(emtrends_table), value = TRUE)[1]
+interpret_emtrends = function(emtrends_table, int.var, moderator, alpha = 0.05) {
+    moderator_col = names(emtrends_table)[1]
+    slope_col     = grep("Slope of", names(emtrends_table), value = TRUE)[1]
 
-    bullets <- mapply(
+    bullets = mapply(
         FUN = function(mod_level, slope, t_ratio, p_value) {
-            p_num     <- suppressWarnings(as.numeric(as.character(p_value)))
-            sig_label <- if (!is.na(p_num) && p_num < alpha) "significant" else "not significant"
-            p_display <- if (!is.na(p_num)) {
+            p_num     = suppressWarnings(as.numeric(as.character(p_value)))
+            sig_label = if (!is.na(p_num) && p_num < alpha) "significant" else "not significant"
+            p_display = if (!is.na(p_num)) {
                 if (p_num < 0.0001) "< 0.0001" else formatC(p_num, format = "f", digits = 4)
             } else as.character(p_value)
 
@@ -350,12 +350,12 @@ interpret_emtrends <- function(emtrends_table, int.var, moderator, alpha = 0.05)
     bullets
 }
 
-interpret_emtrends_contrasts <- function(contrast_table, int.var, moderator, alpha = 0.05) {
-    bullets <- mapply(
+interpret_emtrends_contrasts = function(contrast_table, int.var, moderator, alpha = 0.05) {
+    bullets = mapply(
         FUN = function(contrast, estimate, t_ratio, p_value) {
-            p_num     <- suppressWarnings(as.numeric(as.character(p_value)))
-            sig_label <- if (!is.na(p_num) && p_num < alpha) "significantly different" else "not significantly different"
-            p_display <- if (!is.na(p_num)) {
+            p_num     = suppressWarnings(as.numeric(as.character(p_value)))
+            sig_label = if (!is.na(p_num) && p_num < alpha) "significantly different" else "not significantly different"
+            p_display = if (!is.na(p_num)) {
                 if (p_num < 0.0001) "< 0.0001" else formatC(p_num, format = "f", digits = 4)
             } else as.character(p_value)
 

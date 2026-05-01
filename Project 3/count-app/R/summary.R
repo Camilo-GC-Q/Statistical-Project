@@ -1,6 +1,6 @@
 get_count_summary = function(df, response){
-    y <- df[[response]]
-    y <- y[!is.na(y)]
+    y = df[[response]]
+    y = y[!is.na(y)]
   
     list(
         mean = mean(y),

@@ -5,10 +5,10 @@ fit_negative_binomial_model = function(df, response, predictors, formula_str = N
     model_data = df |>
         drop_na()
 
-    fml_str <- if (!is.null(formula_str)) formula_str else
+    fml_str = if (!is.null(formula_str)) formula_str else
         paste(response, "~", paste(predictors, collapse = " + "))
 
-    model_formula <- as.formula(fml_str)
+    model_formula = as.formula(fml_str)
     MASS::glm.nb(model_formula, data = model_data)
 }
 

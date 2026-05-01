@@ -8,7 +8,16 @@ ui = fluidPage(
     titlePanel("Count Regression Toolkit"),
     sidebarLayout(
         sidebarPanel(
-            fileInput("file", "Upload CSV File", accept = ".csv"),
+            selectInput("sample_data", "Load a sample dataset",
+                choices = c(
+                    "None",
+                    "Armadillo (McMillan et al.)" = "McMillanAcheArmadillo.csv",
+                    "Monkey (McMillan et al.)" = "McMillanAcheMonkey.csv",
+                    "Greenberg 26" = "Greenberg26.csv",
+                    "CS Replication" = "cs_replication_data.csv")
+            ),
+            hr(),
+            fileInput("file", "Or upload your own CSV", accept = ".csv"),
             uiOutput("response_ui"),
             uiOutput("predictor_ui"),
             uiOutput("offset_ui"),
@@ -20,8 +29,7 @@ ui = fluidPage(
             actionButton("fit_model", "Fit Model", class = "btn btn-primary")
         ),
         mainPanel(
-            tabsetPanel(id = "main_tabs"),
-            tabsetPanel(
+            tabsetPanel(id = "main_tabs",
                 tabPanel("Data Preview",
                     tableOutput("preview")
                 ),
@@ -135,9 +143,15 @@ server = function(input, output, session){
 
     # Data input
     data = reactive({
-        req(input$file)
-        read_csv(input$file$datapath)
+    if (!is.null(input$file)) {
+        read_csv(input$file$datapath, show_col_types = FALSE)
+    } else if (input$sample_data != "None") {
+        read_csv(input$sample_data, show_col_types = FALSE)
+    } else {
+        req(FALSE)
+    }
     })
+
 
     # Scaled data
     scaled_data = reactive({
@@ -172,20 +186,10 @@ server = function(input, output, session){
 
     outputOptions(output, "dynamic_irr_table", suspendWhenHidden = FALSE)
 
-    # RQR plots
-    output$rqr_plot = renderPlot({
-        req(selected_model_type())
-        model = resolve_model(selected_model_type())
-        validate(need(!is.null(model),
-            paste("Please fit the", selected_model_type(), "model first.")))
-        plotRQR(model)
-    }, height = 800)
-
     output$dl_rqr_plot = downloadHandler(
         filename = function() "rqr_plots.png",
         content  = function(file) ggsave(file, rqr_results()$plot, width = 10, height = 7, dpi = 300)
     )
-
 
     rqr_results = reactive({
         req(selected_model_type())
@@ -443,7 +447,6 @@ server = function(input, output, session){
             leverage  = input$assume_leverage,
             cooks     = input$assume_cooks,
             dffits    = input$assume_dffits,
-            residuals = input$assume_residuals
         )
     })
 
@@ -666,7 +669,7 @@ server = function(input, output, session){
         model     = resolve_model(selected_model_type())
         req(model)
         vars      = strsplit(input$jn_interaction, ":")[[1]]
-        int.var   = vars[vars != input$jn_moderator]
+        int.var   = vars[vars != input$jn_moderator][1]
         moderator = input$jn_moderator
         dat       = scaled_data()
         int.vars.classes = sapply(dat[, c(int.var, moderator)], class)
@@ -704,7 +707,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars = strsplit(input$jn_interaction, ":")[[1]]
-        pred = vars[vars != input$jn_moderator]
+        pred = vars[vars != input$jn_moderator][1]
         plot_johnson_neyman(model, pred, input$jn_moderator)
     })
     output$jn_plot = renderPlot({ jn_plot_obj() }, height = 500)
@@ -719,7 +722,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars = strsplit(input$jn_interaction, ":")[[1]]
-        int.var = vars[vars != input$jn_moderator]
+        int.var = vars[vars != input$jn_moderator][1]
         moderator = input$jn_moderator
         get_emmeans_table(model, int.var, moderator, data())
     })
@@ -729,7 +732,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars      = strsplit(input$jn_interaction, ":")[[1]]
-        int.var   = vars[vars != input$jn_moderator]
+        int.var   = vars[vars != input$jn_moderator][1]
         moderator = input$jn_moderator
         get_emmeans_contrasts(model, int.var, moderator, data())
     })
@@ -739,7 +742,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars = strsplit(input$jn_interaction, ":")[[1]]
-        int.var = vars[vars != input$jn_moderator]
+        int.var = vars[vars != input$jn_moderator][1]
         moderator = input$jn_moderator
         get_emtrends_table(model, int.var, moderator, data())
     })
@@ -749,7 +752,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars = strsplit(input$jn_interaction, ":")[[1]]
-        int.var = vars[vars != input$jn_moderator]
+        int.var = vars[vars != input$jn_moderator][1]
         moderator = input$jn_moderator
         get_emtrends_contrasts(model, int.var, moderator, data())
     })
@@ -760,7 +763,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars      = strsplit(input$jn_interaction, ":")[[1]]
-        int.var   = vars[vars != input$jn_moderator]
+        int.var   = vars[vars != input$jn_moderator][1]
         moderator = input$jn_moderator
 
         tbl = get_emmeans_table(model, int.var, moderator, data())
@@ -781,7 +784,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars      = strsplit(input$jn_interaction, ":")[[1]]
-        int.var   = vars[vars != input$jn_moderator]
+        int.var   = vars[vars != input$jn_moderator][1]
         moderator = input$jn_moderator
 
         ct      = get_emmeans_contrasts(model, int.var, moderator, data())
@@ -799,7 +802,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars      = strsplit(input$jn_interaction, ":")[[1]]
-        int.var   = vars[vars != input$jn_moderator][1]
+        int.var   = vars[vars != input$jn_moderator][1][1]
         moderator = input$jn_moderator
 
         tbl = get_emtrends_table(model, int.var, moderator, data())
@@ -813,7 +816,7 @@ server = function(input, output, session){
         model = resolve_model(selected_model_type())
         req(model)
         vars      = strsplit(input$jn_interaction, ":")[[1]]
-        int.var   = vars[vars != input$jn_moderator][1]
+        int.var   = vars[vars != input$jn_moderator][1][1]
         moderator = input$jn_moderator
 
         ct = get_emtrends_contrasts(model, int.var, moderator, data())
@@ -829,7 +832,7 @@ server = function(input, output, session){
     req(model)
 
     vars  = strsplit(input$jn_interaction, ":")[[1]]
-    pred  = vars[vars != input$jn_moderator]
+    pred  = vars[vars != input$jn_moderator][1]
     modx  = input$jn_moderator
     dat   = model$model
 
